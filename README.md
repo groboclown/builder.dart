@@ -4,6 +4,16 @@ builder.dart
 General build tool for Dart projects.
 
 
+Status
+======
+
+The tool is just in the beginnings.  The basic API has been established.
+
+* Need to create the loggers to be compatible with both the machine interface and human interface.
+* Add proper target execution ordering (a simple topological sort will do).
+* Add more helper libraries to make creation of builds easier: dart, dart2js, pub, zip, unzip.
+
+
 Adding The Builder To Your Project
 ==================================
 
@@ -28,8 +38,6 @@ create the file `build.dart` in the root project directory.  It should look
 like this:
 
     import "package:builder/builder.dart";
-
-    bool useMachineInterface = false;
 
     void main(List<String> args) {
       make(Build, args);
