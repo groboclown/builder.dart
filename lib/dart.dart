@@ -51,6 +51,10 @@ class DartAnalyzerResult {
 }
 
 
+/**
+ * The `packageRoot` is the root directory of the project being built.  It
+ * should contain a `packages` directory.
+ */
 List<DartAnalyzerResult> dartAnalyzer(FileResource packageRoot,
     ResourceCollection resources) {
   var args = <String>['--machine', '--show-package-warnings', '--package-root',

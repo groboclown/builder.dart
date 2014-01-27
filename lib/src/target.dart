@@ -64,7 +64,9 @@ class TargetMethod {
 
 
   void call(Project project) {
-    InvocationMirror im = owner.invoke(method.simpleName, [project]);
+    InstanceMirror im = owner.invoke(method.simpleName, [project]);
+
+    // Errors?
   }
 }
 
@@ -89,7 +91,7 @@ List<TargetMethod> parseTargets(Type builder) {
           && MirrorSystem.getName(m.parameters[0].type.simpleName) == 'Project'
           ) {
         // Add all methods that have a 'target' annotation
-        m.metadata.where((t) => MirrorSystem.getName(t.simpleName) == 'target')
+        m.metadata.where((t) => MirrorSystem.getName(t.type.simpleName) == 'target')
           .forEach((t) => targets[m] = t);
       }
     });
