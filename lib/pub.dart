@@ -21,28 +21,8 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+library builder.pub;
+
 /**
- * The call-in for the build system.
+ * Methods to invoke the "pub" command.
  */
-
-library builder;
-
-import 'src/argparser.dart';
-import 'src/project.dart';
-import 'src/target.dart';
-export 'src/target.dart' show target;
-
-
-
-
-
-void build(Type builderClass, List<String> args) {
-  var targets = parseTargets(builderClass);
-  var buildArgs = new BuildArgs.fromCmd(args, targets);
-  var project = new Project.parse(buildArgs);
-  for (var target in buildArgs.calledTargets) {
-    project.buildTarget(target);
-  }
-}
-
-

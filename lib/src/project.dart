@@ -27,18 +27,17 @@ library builder.src.project;
 
 import 'logger.dart';
 import 'argparser.dart';
+import 'target.dart';
 
 class Project {
   final Logger logger;
   final List<TargetMethod> _targets;
   final List<TargetMethod> _invokedTargets = [];
-  final Map<String, String> properties= {};
+  final Map<String, String> properties = {};
 
-  Project.parse(BuildArgs args) {
-    this.logger = args.logger;
-
-
-  }
+  Project.parse(BuildArgs args) :
+      logger = args.logger,
+      _targets = args.allTargets;
 
 
   List<TargetMethod> get targets => new List<TargetMethod>.from(_targets);
@@ -56,7 +55,7 @@ class Project {
 
 
   void build(String target) {
-    buildMethod(findTarget(target));
+    buildTarget(findTarget(target));
   }
 
 

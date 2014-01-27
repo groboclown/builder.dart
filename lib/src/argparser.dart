@@ -24,8 +24,10 @@
 
 library builder.src.argparser;
 
-import 'package:args/args.dart';
+import 'dart:io';
+import 'packages:args/args.dart';
 import 'target.dart';
+import 'logger.dart';
 
 /**
  * Parsed build arguments.  Based upon the build.dart standard
@@ -46,7 +48,7 @@ class BuildArgs {
   final List<TargetMethod> calledTargets;
 
   final List<String> changed;
-  final List<String> remvoed;
+  final List<String> removed;
 
 
 
@@ -58,9 +60,9 @@ class BuildArgs {
       { void usageCallback(ArgParser parser) } ) {
     var res = _parseArgs(args, supportedTargets, usageCallback);
     var targets = <TargetMethod>[];
-    for (target in supportedTargets) {
-      if (res[target.name]) {
-        targets.add(target);
+    for (var tgt in supportedTargets) {
+      if (res[tgt.name]) {
+        targets.add(tgt);
       }
     }
 

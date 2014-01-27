@@ -33,7 +33,7 @@ import 'project.dart';
  * Annotation class to define a target.
  */
 class target {
-  final boolean isDefault;
+  final bool isDefault;
   final String description;
   final List<String> depends;
 
@@ -44,7 +44,7 @@ class target {
 
   factory target.main(String description,
       { List<String> depends: null }) {
-    return new target._(description, true);
+    return new target._(description, depends, true);
   }
 
   const target._(this.description, this.depends, this.isDefault);
@@ -64,7 +64,7 @@ class TargetMethod {
 
 
   void call(Project project) {
-    InvocationMirror im = owner.invoke(method, [project]);
+    InvocationMirror im = owner.invoke(method.simpleName, [project]);
   }
 }
 
