@@ -29,14 +29,15 @@ library builder;
 
 import 'src/argparser.dart';
 import 'src/project.dart';
+export 'src/project.dart' show Project;
+
 import 'src/target.dart';
 export 'src/target.dart' show target;
 
 
 
 
-
-void build(Type builderClass, List<String> args) {
+void make(Type builderClass, List<String> args) {
   var targets = parseTargets(builderClass);
   var buildArgs = new BuildArgs.fromCmd(args, targets);
   var project = new Project.parse(buildArgs);
