@@ -21,29 +21,21 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * The call-in for the build system.
- */
-
 library builder;
 
-import 'src/argparser.dart';
-import 'src/project.dart';
-export 'src/project.dart' show Project;
+import 'resource.dart';
 
-import 'src/target.dart';
-export 'src/target.dart' show target;
+
+final OUTPUT_TARGETS = null; 
 
 
 
-
-void make(Type builderClass, List<String> args) {
-  var targets = parseTargets(builderClass);
-  var buildArgs = new BuildArgs.fromCmd(args, targets);
-  var project = new Project.parse(buildArgs);
-  for (var target in buildArgs.calledTargets) {
-    project.buildTarget(target);
-  }
+/**
+ * Declares a mapping of inputs into outputs.
+ */
+class Pipe {
+  List<Pipe> input;
+  List<Resource> output;
 }
 
 
