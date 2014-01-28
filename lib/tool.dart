@@ -22,7 +22,7 @@
  */
 
 /**
- * The declarative build tool definition.
+ * The declarative build tool library.
  *
  * With the `builder` library, the build script declares the different outputs
  * that it generates, and the different additional tasks that it runs.
@@ -38,13 +38,26 @@
  * have the "default" target setting, not the tools.
  */
 
-library builder.src.tool;
+library builder.tool;
 
-import '../resource.dart';
-import 'target.dart';
-import 'exceptions.dart';
+// Make a few private items publicly available.
 
+import 'src/exceptions.dart';
+export 'src/exceptions.dart' show
+  // Only export the top-level exceptions.
+  BuildException, BuildSetupException, BuildExecutionException;
 
+import 'src/decl.dart';
+export 'src/decl.dart' show
+  BuildTool, getTargets, addPhase;
+
+import 'src/logger.dart';
+export 'src/logger.dart' show
+  Logger;
+
+import 'src/project.dart';
+export 'src/project.dart' show
+  Project;
 
 const String TARGET_CLEAN = "clean";
 const String TARGET_BUILD = "build";
@@ -56,6 +69,7 @@ const String PHASE_CLEAN = "phase_clean";
 const String PHASE_BUILD = "phase_build";
 const String PHASE_ASSEMBLE = "phase_assemble";
 const String PHASE_DEPLOY = "phase_deploy";
+
 
 final TargetMethod TARGET_PHASE_CLEAN = addPhase(PHASE_CLEAN, TARGET_CLEAN,
     <String>[ PHASE_BUILD, PHASE_ASSEMBLE, PHASE_DEPLOY ],
@@ -70,114 +84,4 @@ final TargetMethod TARGET_PHASE_DEPLOY = addPhase(PHASE_DEPLOY, TARGET_DEPLOY,
     <String>[ PHASE_BUILD, PHASE_ASSEMBLE, PHASE_DEPLOY ],
     <String>[]);
 
-
-
-
-/**
- * Declares a mapping of inputs into outputs, as used by transformers.  Note
- * that the resources referenced in the [Pipe] are loaded and used before the
- * build begins, so the tool that creates a [Pipe] must be careful to ensure
- * it correctly estimates the outputs.
- *
- * In the case of a tool creating a vague output (e.g. javac creating the
- * inner class files), a directory can be the output.
- */
-abstract class Pipe {
-  List<Resource> get inputs;
-  List<Resource> get outputs;
-
-  /**
-   * If any of the [inputs] map directly to one or more [outputs]
-   * (1-to-many relationship), then that can be defined as its own pipe.
-   */
-  Map<Resource, Pipe> get directInputPipes;
-}
-
-
-
-
-
-
-/**
- * Top level build tool.
- */
-abstract class BuildTool extends TargetMethod {
-  final TargetMethod phase;
-  final Pipe pipe;
-
-  BuildTool(String name, target targetDef, String phase, Pipe pipe) :
-      this.phase = _PHASES[phase],
-      this.pipe = pipe,
-      super(name, targetDef) {
-
-    _addToPhase(phase, this);
-
-    _connectPipes(this);
-
-    _OUTPUT_TARGETS[name] = this;
-  }
-
-
-  /**
-   * Constructs a [target] from the standard ([String]) definitions, for use
-   * in passing to the [BuildTool] constructor.  It does not wire anything up
-   * to the [BuildTool] instance.
-   */
-  static target mkTargetDef(String name, String description,
-      String phase, Pipe pipe, List<String> dependencies,
-      List<String> weakDependencies) {
-    if (! _PHASES.containsKey(phase)) {
-      throw new NoSuchPhaseException(phase);
-    }
-    if (_OUTPUT_TARGETS.containsKey(name) || _PHASES.containsKey(name) ||
-        _TOP_PHASE.containsKey(name)) {
-      throw new MultipleTargetsWithSameNameException(name);
-    }
-
-    var targetDef = new target.internal(description, dependencies,
-        weakDependencies, false);
-    return targetDef;
-  }
-}
-
-
-
-final Map<String, TargetMethod> _OUTPUT_TARGETS = <String, TargetMethod>{};
-final Map<String, TargetMethod> _PHASES = <String, TargetMethod>{};
-final Map<String, TargetMethod> _TOP_PHASE = <String, TargetMethod>{};
-final Map<String, String> _PHASE_NAME_TO_TOP = <String, String>{};
-
-List<TargetMethod> getTargets() {
-  var ret = new List<TargetMethod>.from(_OUTPUT_TARGETS.values);
-  ret.addAll(_PHASES.values);
-  ret.addAll(_TOP_PHASE.values);
-  return ret;
-}
-
-
-void _connectPipes(BuildTool tool) {
-  // FIXME connect this new tool to the list of existing output targets.
-  // Take special care with outputs that are shared by tools.
-}
-
-
-void _addToPhase(String phaseName, BuildTool tool) {
-  var phaseGroup = _PHASES[phaseName];
-  phaseGroup.targetDef.weakDepends.add(tool.name);
-  var phaseTarget = _TOP_PHASE[_PHASE_NAME_TO_TOP[phaseName]];
-  phaseTarget.targetDef.strongDepends.add(tool.name);
-}
-
-
-
-TargetMethod addPhase(String phaseName, String topTargetName,
-    List<String> runsBefore, List<String> runsAfter) {
-  // FIXME insert the phase into the _PHASES list, and connect the runsBefore and runsAfter.
-  // The runsBefore and runsAfter are constructed as "weak" references.
-  // FIXME construct new phase targets that have a strong reference to the
-  // targets in that phase, so that a user can run the phase, rather than
-  // the individual targets.
-  // FIXME make sure to add the name mapping to _PHASE_NAME_TO_TOP.
-
-}
 

@@ -21,7 +21,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-library builder.resource;
+library builder.src.resource;
 
 import 'dart:io';
 import 'dart:collection';

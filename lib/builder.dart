@@ -25,8 +25,8 @@ library builder;
 
 import 'src/argparser.dart';
 import 'src/project.dart';
-import 'src/tool.dart';
-export 'src/tool.dart' show
+import 'tool.dart';
+export 'tool.dart' show
     Pipe, BuildTool, addPhase, getTargets,
     PHASE_CLEAN, PHASE_BUILD, PHASE_ASSEMBLE, PHASE_DEPLOY;
 

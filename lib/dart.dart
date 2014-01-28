@@ -26,7 +26,7 @@ library builder.dart;
 import 'dart:io';
 import 'dart:convert';
 import 'resource.dart';
-import 'src/tool.dart';
+import 'tool.dart';
 import 'src/logger.dart';
 
 /**
