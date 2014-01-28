@@ -28,6 +28,7 @@ library builder.src.project;
 import 'logger.dart';
 import 'argparser.dart';
 import 'target.dart';
+import 'exceptions.dart';
 
 class Project {
   final Logger logger;
@@ -79,13 +80,98 @@ class Project {
   }
 
 
+  TargetMethod _findTarget(String name) {
+    var matches = _targets.where((t) => t.name == name);
+    if (matches.isEmpty) {
+      return null;
+    }
+    if (matches.length > 1) {
+      throw new MultipleTargetsWithSameNameException(name);
+    }
+    return matches[0];
+  }
+
+
   /**
    * Return the list of targets to execute for this target, which means
    * constructing an ordered dependency chain (including `m` at the very
    * end), excluding all the already-executed dependencies.
+   *
+   * This is a simple topological sort.  It returns only the targets that
+   * are dependents of the roots.
+   *
+   * If `complete` is `true`, then the complete dependency graph is generated
+   * in order to check for cycles or missing dependencies.
    */
-  List<TargetMethod> _dependencyList(TargetMethod m) {
-    // FIXME
+  List<TargetMethod> _dependencyList(List<TargetMethod> roots, bool complete) {
+    var ret = <TargetMethod>[];
+    var state = <TargetMethod, TOPO_STATE>{};
+    var visiting = <String>[];
 
+    // Run a depth-first-search using each root as a starting node.
+    // This creates the minimum target list to run.
+    for (TargetMethod tm in roots) {
+      if (! state.containsKey(tm)) {
+        _tsort(tm, state, visiting, ret);
+      } else if (state[tm] == TOPO_STATE.VISITING) {
+        throw new CyclicTargetDefinitionException(visiting);
+      }
+    }
+
+
+    // Optionally, run the sort on all unvisited targets to detect
+    // cycles or missing target dependencies.
+    if (complete) {
+      for (TargetMethod currentTarget in _targets) {
+        if (! state.containsKey(currentTarget)) {
+          _tsort(tm, state, visiting, ret);
+        } else if (state[currentTarget] == TOPO_STATE.VISITING) {
+          throw new CyclicTargetDefinitionException(visiting);
+        }
+      }
+    }
+    return ret;
   }
+
+
+  /**
+   * One step in the recursive depth-first-search traversal.
+   */
+  void _tsort(TargetMethod root, Map<TargetMethod, TOPO_STATE> state,
+      List<String> visiting, List<TargetMethod> ret) {
+    state[root] = TOPO_STATE.VISITING;
+    visiting.add(root.name);
+
+    for (String dependentName in root.targetDef.depends) {
+      TargetMethod dependent = _findTarget(dependentName);
+      if (dependent == null) {
+        throw new MissingTargetException(root.name, dependentName);
+      }
+      if (! state.containsKey(dependent)) {
+        // needs to be visited
+        _tsort(dependent, state, visiting, ret);
+      } else if (state[dependent] == TOPO_STATE.VISITING) {
+        throw new CyclicTargetDefinitionException(visiting);
+      }
+    }
+    var visitor = visiting.removeLast();
+    if (visitor != root.name) {
+      throw new BuildSetupException("internal error: expected '" + root.name +
+      "' but found '" + visitor + "'");
+    }
+    state[root] = TOPO_STATE.VISITED;
+    ret.add(root);
+  }
+
+}
+
+
+
+class TOPO_STATE {
+  static final VISITING = new TOPO_STATE._();
+  static final VISITED = new TOPO_STATE._();
+
+  static get values => [ VISITED, VISITING ];
+
+  TOPO_STATE._();
 }

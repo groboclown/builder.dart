@@ -26,6 +26,7 @@ library builder.logger;
 
 import 'dart:convert';
 
+import 'target.dart';
 
 
 /**
@@ -33,7 +34,11 @@ import 'dart:convert';
  * in the command-line (human readable) or to the Dart Editor (JSON).
  */
 abstract class Logger {
-  void warn(Target)
+  abstract void info(TargetMethod tm, String message);
+
+  abstract void warn(TargetMethod tm, String message);
+
+  abstract void error(TargetMethod tm, String message);
 }
 
 

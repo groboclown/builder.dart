@@ -61,15 +61,20 @@ class target {
 }
 
 
+
+/**
+ * The abstract class that defines the actual invocable target.
+ */
 abstract class TargetMethod {
+  final String name;
   final target targetDef;
 
-  TargetMethod(this.targetDef);
+  TargetMethod(this.name, this.targetDef);
 
-  String get name => MirrorSystem.getName(method.simpleName);
-
-  String get description => targetDef.description;
-
+  /**
+   * Performs the operation of the target.  It throws a [BuildException]
+   * on an error (see [exceptions.dart]).
+   */
   abstract void call(Project project);
 }
 
@@ -83,6 +88,9 @@ class AnnotatedTarget extends TargetMethod {
     method = method,
     super(targetDef);
 
+  String get name => MirrorSystem.getName(method.simpleName);
+
+  String get description => targetDef.description;
 
   void call(Project project) {
     InstanceMirror im = owner.invoke(method.simpleName, [project]);
