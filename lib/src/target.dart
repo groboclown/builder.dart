@@ -22,15 +22,25 @@
  */
 
 
+/**
+ * Definitions on a "target" - a callable that has:
+ *
+ * 1. A name and description.
+ * 2. Dependent targets.
+ * 3. An invocable callback.
+ *
+ * Additionally, each build must define exactly one target as the default.
+ */
+
 
 library builder.src.target;
 
 import 'dart:mirrors';
-
 import 'project.dart';
 
 /**
- * Annotation class to define a target.
+ * A target description.  Can be used as an annotation in the procedural
+ * build approach.
  */
 class target {
   final bool isDefault;
@@ -51,27 +61,42 @@ class target {
 }
 
 
-class TargetMethod {
+abstract class TargetMethod {
   final target targetDef;
-  final InstanceMirror owner;
-  final MethodMirror method;
 
-  const TargetMethod(this.targetDef, this.owner, this.method);
+  TargetMethod(this.targetDef);
 
   String get name => MirrorSystem.getName(method.simpleName);
 
   String get description => targetDef.description;
 
+  abstract void call(Project project);
+}
+
+
+class AnnotatedTarget extends TargetMethod {
+  final InstanceMirror owner;
+  final MethodMirror method;
+
+  TargetMethod(target targetDef, InstanceMirror owner, MethodMirror method) :
+    owner = owner,
+    method = method,
+    super(targetDef);
+
 
   void call(Project project) {
     InstanceMirror im = owner.invoke(method.simpleName, [project]);
 
-    // Errors?
+    // Does this need error checking?
   }
+
 }
 
 
 
+/**
+ * Creates the build targets that are defined in a builder Class.
+ */
 List<TargetMethod> parseTargets(Type builder) {
   ClassMirror cm = reflectClass(builder);
 
@@ -104,12 +129,13 @@ List<TargetMethod> parseTargets(Type builder) {
 
   // Create our returns
   var ret = <TargetMethod>[];
-  targets.forEach((mm, t) => ret.add(new TargetMethod(t, buildInstance, mm)));
+  targets.forEach((mm, t) => ret.add(new AnnotatedTarget(t, buildInstance, mm)));
 
-  var defaults = ret.where((t) => t.targetDef.isDefault);
-  if (defaults.length != 1) {
-    throw new Exception("invalid builder ${builder}: there must be exactly 1 default target");
-  }
+  // This should be done in the caller
+  //var defaults = ret.where((t) => t.targetDef.isDefault);
+  //if (defaults.length != 1) {
+  //  throw new Exception("invalid builder ${builder}: there must be exactly 1 default target");
+  //}
 
   return ret;
 }

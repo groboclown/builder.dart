@@ -33,7 +33,7 @@ import 'dart:convert';
  * in the command-line (human readable) or to the Dart Editor (JSON).
  */
 abstract class Logger {
-
+  void warn(Target)
 }
 
 
