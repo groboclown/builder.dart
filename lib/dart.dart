@@ -26,6 +26,8 @@ library builder.dart;
 import 'dart:io';
 import 'dart:convert';
 import 'resource.dart';
+import 'src/tool.dart';
+
 
 /**
  * Methods to invoke the commands distributed with the dart sdk.
@@ -74,6 +76,12 @@ List<DartAnalyzerResult> dartAnalyzer(FileResource packageRoot,
       int.parse(line[4]), int.parse(line[5]), line[7]));
   }
 }
+
+
+class DartAnalyzer extends BuildTool {
+
+}
+
 
 
 

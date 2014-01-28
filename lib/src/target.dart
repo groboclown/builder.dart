@@ -36,6 +36,8 @@
 library builder.src.target;
 
 import 'dart:mirrors';
+import 'dart:collection';
+
 import 'project.dart';
 
 /**
@@ -45,19 +47,34 @@ import 'project.dart';
 class target {
   final bool isDefault;
   final String description;
-  final List<String> depends;
+
+  /**
+   * Defines the ordering relationship.  Implicitly includes all the strong
+   * dependencies.
+   */
+  final List<String> weakDepends;
+
+  /**
+   * Defines which targets will be built if this one is built.
+   */
+  final List<String> strongDepends;
 
   factory target(String description,
-      { List<String> depends: null }) {
-    return new target._(description, depends, false);
+      { List<String> depends: null, List<String> weak: null }) {
+    return new target.internal(description, depends, weak, false);
   }
 
   factory target.main(String description,
-      { List<String> depends: null }) {
-    return new target._(description, depends, true);
+      { List<String> depends: null, List<String> weak: null }) {
+    return new target.internal(description, depends, weak, true);
   }
 
-  const target._(this.description, this.depends, this.isDefault);
+
+  /**
+   * A "friend" constructor, used by tool.dart.
+   */
+  const target.internal(this.description, this.strongDepends, this.weakDepends,
+      this.isDefault);
 }
 
 
@@ -70,6 +87,17 @@ abstract class TargetMethod {
   final target targetDef;
 
   TargetMethod(this.name, this.targetDef);
+
+  List<String> get runsAfter {
+    var ret = new Set<String>.from(targetDef.weakDepends);
+    ret.addAll(targetDef.strongDepends);
+    return new UnmodifiableListView<String>(ret);
+  }
+
+  List<String> get requires =>
+      new UnmodifiableListView<String>(targetDef.strongDepends);
+
+
 
   /**
    * Performs the operation of the target.  It throws a [BuildException]

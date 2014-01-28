@@ -23,19 +23,38 @@
 
 library builder;
 
-import 'resource.dart';
-
-
-final OUTPUT_TARGETS = null; 
+import 'src/argparser.dart';
+import 'src/project.dart';
+import 'src/tool.dart';
+export 'src/tool.dart' show
+    Pipe, BuildTool, addPhase, getTargets,
+    PHASE_CLEAN, PHASE_BUILD, PHASE_ASSEMBLE, PHASE_DEPLOY;
 
 
 
 /**
- * Declares a mapping of inputs into outputs.
+ * The declarative build tool.
+ *
+ * With the `builder` library, the build script declares the different outputs
+ * that it generates, and the different additional tasks that it runs.
+ *
+ * Each tool declares the phase that it runs in, and a [Pipe] of inputs and
+ * outputs.
+ *
+ * Phases are just targets that have dependencies on themselves in a pre-defined
+ * order.  By default, the build defines the phases "clean", "build",
+ * "assemble", and "deploy".  Tests are either part of the deploy phase
+ * (for client-side tests) or the build phase (unit tests).  Additional phases
+ * can be added with the [addPhase()] call.  Additionally, the phases
+ * have the "default" target setting, not the tools.
  */
-abstract class Pipe {
-  List<Pipe> get inputs;
-  List<Resource> get outputs;
+
+
+
+void build(List<String> args) {
+  var buildArgs = new BuildArgs.fromCmd(args, getTargets());
+  var project = new Project.parse(buildArgs);
+  project.buildTargets(buildArgs.calledTargets);
 }
 
 

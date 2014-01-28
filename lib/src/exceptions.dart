@@ -114,3 +114,10 @@ class PropertyRedefinitionException extends BuildExecutionException {
 class NoRunningTargetException extends BuildSetupException {
   NoRunningTargetException() : super("no running target");
 }
+
+
+class NoSuchPhaseException extends BuildSetupException {
+  NoSuchPhaseException(String phase) :
+    super("no such phase defined: '" + phase +
+      "'; it must be created before being referenced");
+}

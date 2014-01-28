@@ -143,62 +143,89 @@ class Project {
    *
    * If `complete` is `true`, then the complete dependency graph is generated
    * in order to check for cycles or missing dependencies.
+   *
+   * This is specially structured to allow a double sorting.  Each
+   * [TargetMethod] has a list of required dependencies - if the target
+   * itself must build, then all the required dependencies must also build,
+   * and it also has a weak sorting - it must run after all the weakly
+   * dependent targets, but they are not required to run.
    */
   List<TargetMethod> _dependencyList(List<TargetMethod> roots, bool complete) {
-    var ret = <TargetMethod>[];
-    var state = <TargetMethod, _TOPO_STATE>{};
+    Map<String, _TargetOrder> orders = <String, _TargetOrder>{};
+    List<_TargetOrder> orderedRoots = <_TargetOrder>[];
+    for (TargetMethod tm in _targets) {
+      var order = new _TargetOrder(tm);
+      orders[tm.name] = order;
+      if (roots.contains(tm)) {
+        order.required = true;
+        orderedRoots.add(order);
+      }
+    }
+
+
+    var ret = <_TargetOrder>[];
+    var state = <_TargetOrder, _TOPO_STATE>{};
     var visiting = <String>[];
 
     // Run a depth-first-search using each root as a starting node.
     // This creates the minimum target list to run.
-    for (TargetMethod tm in roots) {
+    for (_TargetOrder tm in orderedRoots) {
       if (! state.containsKey(tm)) {
-        _tsort(tm, state, visiting, ret);
+        _tsort(tm, state, orders, visiting, ret);
       } else if (state[tm] == _TOPO_STATE.VISITING) {
         throw new CyclicTargetDefinitionException(visiting);
       }
     }
 
+    // Collect all the TargetMethod instances that are required to run.
+    var tmRet = ret.map((tm) => tm.required ? tm.tm : null).where((tm) => tm != null);
 
     // Optionally, run the sort on all unvisited targets to detect
-    // cycles or missing target dependencies.
+    // cycles or missing target dependencies.  These are not added to the
+    // returned values.
     if (complete) {
-      for (TargetMethod currentTarget in _targets) {
+      for (_TargetOrder currentTarget in orders.values) {
         if (! state.containsKey(currentTarget)) {
-          _tsort(currentTarget, state, visiting, ret);
+          _tsort(currentTarget, state, orders, visiting, ret);
         } else if (state[currentTarget] == _TOPO_STATE.VISITING) {
           throw new CyclicTargetDefinitionException(visiting);
         }
       }
     }
-    return ret;
+    return tmRet;
   }
 
 
   /**
    * One step in the recursive depth-first-search traversal.
    */
-  void _tsort(TargetMethod root, Map<TargetMethod, _TOPO_STATE> state,
-      List<String> visiting, List<TargetMethod> ret) {
+  void _tsort(_TargetOrder root, Map<_TargetOrder, _TOPO_STATE> state,
+      Map<String, _TargetOrder> orders, List<String> visiting,
+      List<_TargetOrder> ret) {
     state[root] = _TOPO_STATE.VISITING;
-    visiting.add(root.name);
+    visiting.add(root.tm.name);
 
-    for (String dependentName in root.targetDef.depends) {
-      TargetMethod dependent = _findTarget(dependentName);
-      if (dependent == null) {
-        throw new MissingTargetException(root.name, dependentName);
+    for (var dependentName in root.tm.runsAfter) {
+      if (! orders.containsKey(dependentName)) {
+        throw new MissingTargetException(root.tm.name, dependentName);
       }
+      var dependent = orders[dependentName];
+
+      if (root.required && root.tm.requires.contains(dependentName)) {
+        dependent.required = true;
+      }
+
       if (! state.containsKey(dependent)) {
         // needs to be visited
-        _tsort(dependent, state, visiting, ret);
+        _tsort(dependent, state, orders, visiting, ret);
       } else if (state[dependent] == _TOPO_STATE.VISITING) {
         throw new CyclicTargetDefinitionException(visiting);
       }
     }
     var visitor = visiting.removeLast();
-    if (visitor != root.name) {
-      throw new BuildSetupException("internal error: expected '" + root.name +
-      "' but found '" + visitor + "'");
+    if (visitor != root.tm.name) {
+      throw new BuildSetupException("internal error: expected '" +
+          root.tm.name + "' but found '" + visitor + "'");
     }
     state[root] = _TOPO_STATE.VISITED;
     ret.add(root);
@@ -249,6 +276,14 @@ class _ChildProject extends Project {
   @override
   void buildTargets(List<TargetMethod> targets) => _parent.buildTargets(targets);
 
+}
+
+
+class _TargetOrder {
+  final TargetMethod tm;
+  bool required;
+
+  _TargetOrder(this.tm) : required = false;
 }
 
 

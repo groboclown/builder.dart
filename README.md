@@ -4,16 +4,19 @@ builder.dart
 General build tool for Dart projects.
 
 
+
 Status
 ======
 
 The tool is just in the beginnings.  The basic API has been established.
 
 * Need to create the loggers to be compatible with both the machine interface and human interface.
-* Add proper target execution ordering (a simple topological sort will do).
 * Add more helper libraries to make creation of builds easier: dart, dart2js, pub, zip, unzip.
 * Currently, this is using a procedural build process.  Work has begun to allow for a declarative build process.
 * Update this documentation as work progresses.
+* Add support for testing frameworks like DumpRenderTree (used by Dart team's [web-ui](https://github.com/dart-lang/web-ui) project)
+* Work on publicity and integration with tools like [drone.io](http://docs.drone.io/dart.html)
+
 
 
 Adding The Builder To Your Project
@@ -34,6 +37,9 @@ You first need to add the builder library to your `pubspec.yaml` file:
 
 Because the library is only used to build the project, it should belong in the
 `dev_dependencies` section, not `dependencies`.
+
+Note: due to this change, any build of your project will still require a new
+copy of the code to run `pub install` to pull in the builder library.
 
 Next, in accordance with the [dart build file standard](https://www.dartlang.org/tools/editor/build.html),
 create the file `build.dart` in the root project directory.  It should look
