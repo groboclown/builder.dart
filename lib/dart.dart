@@ -27,7 +27,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'resource.dart';
 import 'src/tool.dart';
-
+import 'src/logger.dart';
 
 /**
  * Methods to invoke the commands distributed with the dart sdk.
@@ -37,20 +37,6 @@ import 'src/tool.dart';
 final Directory DART_HOME = new Directory(Platform.environment['DART_HOME']);
 final Directory DART_BIN = new Directory(DART_HOME.path + "/bin");
 final File DART_ANALYZER_EXEC = new File(DART_BIN.path + "/dartanalyzer");
-
-
-class DartAnalyzerResult {
-  final String level; // WARNING or ERROR
-  final String category; // COMPILE_TIME_ERROR, STATIC_WARNING, ...
-  final String id; // UNDEFINED_CLASS, UNDEFINED_IDENTIFIER, ...
-  final Resource file;
-  final int line;
-  final int column;
-  final String message;
-
-  DartAnalyzerResult(this.level, this.category, this.id, this.file, this.line,
-      this.column, this.message);
-}
 
 
 /**

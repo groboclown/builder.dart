@@ -74,7 +74,13 @@ final TargetMethod TARGET_PHASE_DEPLOY = addPhase(PHASE_DEPLOY, TARGET_DEPLOY,
 
 
 /**
- * Declares a mapping of inputs into outputs, as used by transformers.
+ * Declares a mapping of inputs into outputs, as used by transformers.  Note
+ * that the resources referenced in the [Pipe] are loaded and used before the
+ * build begins, so the tool that creates a [Pipe] must be careful to ensure
+ * it correctly estimates the outputs.
+ *
+ * In the case of a tool creating a vague output (e.g. javac creating the
+ * inner class files), a directory can be the output.
  */
 abstract class Pipe {
   List<Resource> get inputs;
@@ -151,6 +157,7 @@ List<TargetMethod> getTargets() {
 
 void _connectPipes(BuildTool tool) {
   // FIXME connect this new tool to the list of existing output targets.
+  // Take special care with outputs that are shared by tools.
 }
 
 
