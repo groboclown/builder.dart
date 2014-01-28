@@ -29,21 +29,55 @@ import 'logger.dart';
 import 'argparser.dart';
 import 'target.dart';
 import 'exceptions.dart';
+import '../resource.dart';
 
 class Project {
-  final Logger logger;
+  final AbstractLogger _baseLogger;
   final List<TargetMethod> _targets;
   final List<TargetMethod> _invokedTargets = [];
-  final Map<String, String> properties = {};
+  final Map<String, String> _properties = {};
+  final ResourceCollection changed;
+  final ResourceCollection removed;
 
   Project.parse(BuildArgs args) :
-      logger = args.logger,
-      _targets = args.allTargets;
+      _baseLogger = args.logger,
+      _targets = args.allTargets,
+      changed = filenamesAsCollection(args.changed),
+      removed = filenamesAsCollection(args.removed);
+
+  Project._fromChild(Project parent) :
+      _baseLogger = parent._baseLogger,
+      _targets = null,
+      changed = null,
+      removed = null;
+
+  TargetMethod get activeTarget {
+    throw new NoRunningTargetException();
+  }
+
+  Logger get logger {
+    throw new NoRunningTargetException();
+  }
 
 
   List<TargetMethod> get targets => new List<TargetMethod>.from(_targets);
 
   List<String> get targetNames => new List<String>.from(_targets.map((t) => t.name));
+
+  String getProperty(String key) {
+    return _properties[key];
+  }
+
+  bool hasProperty(String key) {
+    return _properties.containsKey(key);
+  }
+
+  void setProperty(String key, String value) {
+    if (hasProperty(key)) {
+      throw new PropertyRedefinitionException(activeTarget, key,
+        getProperty(key), value);
+    }
+  }
 
   TargetMethod findTarget(String name) {
     for (TargetMethod tm in _targets) {
@@ -56,7 +90,7 @@ class Project {
 
 
   void build(String target) {
-    buildTarget(findTarget(target));
+    buildTargets([ findTarget(target) ]);
   }
 
 
@@ -64,18 +98,25 @@ class Project {
    * Run the full build for this specific [TargetMethod].  It will not repeat
    * any target that has already been run in this project.
    */
-  void buildTarget(TargetMethod m) {
-    if (m == null) {
+  void buildTargets(List<TargetMethod> targets) {
+    if (targets == null) {
       throw new Exception("null target");
     }
-    if (_invokedTargets.contains(m)) {
-      // do nothing
-      return;
-    }
 
-    // run the dependencies and the target
-    for (TargetMethod tm in _dependencyList(m)) {
-      tm.call(this);
+    // run the dependencies and the target.  Only check the whole dependency
+    // tree if this is the first target run.
+    for (TargetMethod tm in _dependencyList(targets, _invokedTargets.isEmpty)) {
+      if (! _invokedTargets.contains(tm)) {
+        _invokedTargets.add(tm);
+
+        // This could be a future, as long as the dependency list is honored
+        // and checked for completion before running.  It would mean changing
+        // the _invokedTargets to instead be a Map of futures.
+
+        Project child = new _ChildProject(this, tm);
+        tm.call(child);
+
+      }
     }
   }
 
@@ -105,7 +146,7 @@ class Project {
    */
   List<TargetMethod> _dependencyList(List<TargetMethod> roots, bool complete) {
     var ret = <TargetMethod>[];
-    var state = <TargetMethod, TOPO_STATE>{};
+    var state = <TargetMethod, _TOPO_STATE>{};
     var visiting = <String>[];
 
     // Run a depth-first-search using each root as a starting node.
@@ -113,7 +154,7 @@ class Project {
     for (TargetMethod tm in roots) {
       if (! state.containsKey(tm)) {
         _tsort(tm, state, visiting, ret);
-      } else if (state[tm] == TOPO_STATE.VISITING) {
+      } else if (state[tm] == _TOPO_STATE.VISITING) {
         throw new CyclicTargetDefinitionException(visiting);
       }
     }
@@ -124,8 +165,8 @@ class Project {
     if (complete) {
       for (TargetMethod currentTarget in _targets) {
         if (! state.containsKey(currentTarget)) {
-          _tsort(tm, state, visiting, ret);
-        } else if (state[currentTarget] == TOPO_STATE.VISITING) {
+          _tsort(currentTarget, state, visiting, ret);
+        } else if (state[currentTarget] == _TOPO_STATE.VISITING) {
           throw new CyclicTargetDefinitionException(visiting);
         }
       }
@@ -137,9 +178,9 @@ class Project {
   /**
    * One step in the recursive depth-first-search traversal.
    */
-  void _tsort(TargetMethod root, Map<TargetMethod, TOPO_STATE> state,
+  void _tsort(TargetMethod root, Map<TargetMethod, _TOPO_STATE> state,
       List<String> visiting, List<TargetMethod> ret) {
-    state[root] = TOPO_STATE.VISITING;
+    state[root] = _TOPO_STATE.VISITING;
     visiting.add(root.name);
 
     for (String dependentName in root.targetDef.depends) {
@@ -150,7 +191,7 @@ class Project {
       if (! state.containsKey(dependent)) {
         // needs to be visited
         _tsort(dependent, state, visiting, ret);
-      } else if (state[dependent] == TOPO_STATE.VISITING) {
+      } else if (state[dependent] == _TOPO_STATE.VISITING) {
         throw new CyclicTargetDefinitionException(visiting);
       }
     }
@@ -159,19 +200,64 @@ class Project {
       throw new BuildSetupException("internal error: expected '" + root.name +
       "' but found '" + visitor + "'");
     }
-    state[root] = TOPO_STATE.VISITED;
+    state[root] = _TOPO_STATE.VISITED;
     ret.add(root);
   }
 
 }
 
+// FIXME figure out the right way to use @proxy
+class _ChildProject extends Project {
+  final Project _parent;
+  final TargetMethod _activeTarget;
+  final Logger _logger;
+
+  _ChildProject(Project parent, TargetMethod activeTarget) :
+      _parent = parent,
+      _activeTarget = activeTarget,
+      _logger = new Logger(activeTarget, parent._baseLogger),
+      super._fromChild(parent);
 
 
-class TOPO_STATE {
-  static final VISITING = new TOPO_STATE._();
-  static final VISITED = new TOPO_STATE._();
+  @override
+  TargetMethod get activeTarget => _activeTarget;
+
+  @override
+  Logger get logger => _logger;
+
+  @override
+  List<TargetMethod> get targets => _parent.targets;
+
+  @override
+  List<String> get targetNames => _parent.targetNames;
+
+  @override
+  String getProperty(String key) => _parent.getProperty(key);
+
+  @override
+  bool hasProperty(String key) => _parent.hasProperty(key);
+
+  @override
+  void setProperty(String key, String value) => _parent.setProperty(key, value);
+
+  @override
+  TargetMethod findTarget(String name) => _parent.findTarget(name);
+
+  @override
+  void build(String target) => _parent.build(target);
+
+  @override
+  void buildTargets(List<TargetMethod> targets) => _parent.buildTargets(targets);
+
+}
+
+
+
+class _TOPO_STATE {
+  static final VISITING = new _TOPO_STATE._();
+  static final VISITED = new _TOPO_STATE._();
 
   static get values => [ VISITED, VISITING ];
 
-  TOPO_STATE._();
+  _TOPO_STATE._();
 }

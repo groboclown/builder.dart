@@ -35,7 +35,7 @@ import 'logger.dart';
  * plus additional arguments for custom targets.
  */
 class BuildArgs {
-  final Logger logger;
+  final AbstractLogger logger;
 
   /**
    * All the targets supported by the build file.
@@ -70,7 +70,7 @@ class BuildArgs {
       targets.addAll(supportedTargets.where((t) => t.targetDef.isDefault));
     }
 
-    Logger logger;
+    var logger;
     if (res['machine']) {
       logger = new JsonLogger();
     } else {
@@ -111,8 +111,8 @@ ArgResults _parseArgs(List<String> args, List<TargetMethod> supportedTargets,
       help: "This help message",
       negatable: false);
 
-  supportedTargets.forEach((k) => parser.addFlag(k.name, help: k.description,
-    negatable: false));
+  supportedTargets.forEach((k) =>
+    parser.addFlag(k.name, help: k.targetDef.description, negatable: false));
 
   var res;
   try {

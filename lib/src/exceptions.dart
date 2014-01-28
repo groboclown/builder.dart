@@ -24,12 +24,14 @@
 
 library builder.src.exceptions;
 
-class BuildException extends Exception {
+import 'target.dart';
+
+
+class BuildException implements Exception {
   final String message;
 
   BuildException(String message) :
-    message = message,
-    super(message);
+    message = message;
 
   @override
   String toString() {
@@ -38,8 +40,21 @@ class BuildException extends Exception {
 }
 
 
+/**
+ * There was something wrong with the initial setup of the build script.
+ */
 class BuildSetupException extends BuildException {
   BuildSetupException(String message) : super(message);
+}
+
+
+/**
+ * The execution of the build caused a problem.
+ */
+class BuildExecutionException extends BuildException {
+  final TargetMethod target;
+
+  BuildExecutionException(this.target, String message) : super(message);
 }
 
 
@@ -52,15 +67,17 @@ class NoDefaultTargetException extends BuildSetupException {
 class CyclicTargetDefinitionException extends BuildSetupException {
   final List<String> targetNames;
 
-  CyclicTargetDefinitionException(this.targetNames) :
-    super("found a cycle in the target dependencies for " + targetNames);
+  CyclicTargetDefinitionException(List<String> targetNames) :
+    this.targetNames = targetNames,
+    super("found a cycle in the target dependencies for " + targetNames.toString());
 }
 
 
 class MultipleTargetsWithSameNameException extends BuildSetupException {
   final String name;
 
-  MultipleTargetsWithSameNameException(this.name) :
+  MultipleTargetsWithSameNameException(String name) :
+    this.name = name,
     super("multiple targets with name '" + name + " found");
 }
 
@@ -69,7 +86,31 @@ class MissingTargetException extends BuildSetupException {
   final String definingTarget;
   final String dependentTarget;
 
-  MissingTargetException(this.definingTarget, this.dependentTarget) :
+  MissingTargetException(String definingTarget, String dependentTarget) :
+    this.definingTarget = definingTarget,
+    this.dependentTarget = dependentTarget,
     super("target '" + definingTarget + "' defines dependency on target '" +
       dependentTarget + "' which does not exist");
+}
+
+
+class PropertyRedefinitionException extends BuildExecutionException {
+  final String propertyName;
+  final String originalPropertyValue;
+  final String replacedPropertyValue;
+
+  PropertyRedefinitionException(TargetMethod target, String propertyName,
+      String originalPropertyValue, String replacedPropertyValue) :
+      this.propertyName = propertyName,
+      this.originalPropertyValue = originalPropertyValue,
+      this.replacedPropertyValue = replacedPropertyValue,
+      super(target, "target '" + target.name +
+        "' attempted to redefine property '" + propertyName + "' from '" +
+        originalPropertyValue + "' to '" + replacedPropertyValue + "'");
+}
+
+
+
+class NoRunningTargetException extends BuildSetupException {
+  NoRunningTargetException() : super("no running target");
 }

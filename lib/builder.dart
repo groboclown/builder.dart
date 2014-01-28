@@ -33,9 +33,9 @@ final OUTPUT_TARGETS = null;
 /**
  * Declares a mapping of inputs into outputs.
  */
-class Pipe {
-  List<Pipe> input;
-  List<Resource> output;
+abstract class Pipe {
+  List<Pipe> get inputs;
+  List<Resource> get outputs;
 }
 
 

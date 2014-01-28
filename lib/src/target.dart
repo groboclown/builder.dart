@@ -75,7 +75,7 @@ abstract class TargetMethod {
    * Performs the operation of the target.  It throws a [BuildException]
    * on an error (see [exceptions.dart]).
    */
-  abstract void call(Project project);
+  void call(Project project);
 }
 
 
@@ -83,15 +83,12 @@ class AnnotatedTarget extends TargetMethod {
   final InstanceMirror owner;
   final MethodMirror method;
 
-  TargetMethod(target targetDef, InstanceMirror owner, MethodMirror method) :
+  AnnotatedTarget(target targetDef, InstanceMirror owner, MethodMirror method) :
     owner = owner,
     method = method,
-    super(targetDef);
+    super(MirrorSystem.getName(method.simpleName), targetDef);
 
-  String get name => MirrorSystem.getName(method.simpleName);
-
-  String get description => targetDef.description;
-
+  @override
   void call(Project project) {
     InstanceMirror im = owner.invoke(method.simpleName, [project]);
 

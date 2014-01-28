@@ -24,6 +24,7 @@
 library builder.resource;
 
 import 'dart:io';
+import 'dart:collection';
 import 'dart:convert';
 
 /**
@@ -100,10 +101,11 @@ abstract class ResourceCollection {
 class SimpleResourceCollection extends ResourceCollection {
   final List<Resource> _entries;
 
-  SimpleResourceCollection(this._entries);
+  SimpleResourceCollection(List<Resource> entries) :
+    _entries = new UnmodifiableListView<Resource>(entries);
 
   SimpleResourceCollection.single(Resource entry) :
-      _entries = <Resource>[ entry ];
+      _entries = new UnmodifiableListView<Resource>(<Resource>[ entry ]);
 
   @override
   List<Resource> entries() => this._entries;
@@ -117,7 +119,7 @@ abstract class AbstractResourceCollection extends ResourceCollection {
   @override
   List<Resource> entries() {
     if (_entries == null) {
-      _entries = findResources();
+      _entries = new UnmodifiableListView<Resource>(findResources());
     }
     return _entries;
   }
@@ -243,37 +245,25 @@ class FileEntityResource<T extends FileSystemEntity>
   }
 
 
-  bool _isLinkDir(Link f) {
-    try {
-      String path = f.resolveSymbolicLinksSync();
-      return FileSystemEntity.isDirectorySync(path);
-    } on FileSystemException {
-      // does not point to a real object
-      return false;
-    }
-  }
 }
 
 
 
 class DirectoryResource extends FileEntityResource<FileSystemEntity>
     with ResourceListable<FileEntityResource> {
-  DirectoryResource(FileSystemEntity dir) : super(dir);
+  final Directory referencedDirectory;
+
+  DirectoryResource(Directory dir) :
+    referencedDirectory = dir,
+    super(dir);
+
+  DirectoryResource.fromLink(Link link) :
+    referencedDirectory = new Directory(link.resolveSymbolicLinksSync()),
+    super(link);
 
   List<FileEntityResource> list() {
-    return _asDir().listSync(recursive: false, followLinks: true).map((f) =>
-      f is Directory || (f is Link && _isLinkDir(f))
-        ? new DirectoryResource(f)
-        : new FileResource(f));
-  }
-
-
-  Directory _asDir() {
-    if (entity is Directory) {
-      return entity as Directory;
-    }
-    var e = entity as Link;
-    return new Directory(e.resolveSymbolicLinksSync());
+    return referencedDirectory.listSync(recursive: false, followLinks: true)
+      .map((f) => filenameToResource(f));
   }
 
 
@@ -282,40 +272,93 @@ class DirectoryResource extends FileEntityResource<FileSystemEntity>
 
 
 class FileResource extends FileEntityResource<FileSystemEntity> {
-  FileResource(FileSystemEntity f) : super(f);
+  final File referencedFile;
+
+  FileResource(File f) :
+    referencedFile = f,
+    super(f);
+
+  FileResource.fromLink(Link link) :
+    referencedFile = new File(link.resolveSymbolicLinksSync()),
+    super(link);
 
   List<int> readAsBytes() {
-    return _asFile().readAsBytesSync();
+    return referencedFile.readAsBytesSync();
   }
 
   String readAsString({ Encoding encoding: null }) {
     if (encoding == null) {
       encoding = SYSTEM_ENCODING;
     }
-    return _asFile().readAsStringSync(encoding: encoding);
+    return referencedFile.readAsStringSync(encoding: encoding);
   }
 
   void writeBytes(List<int> data) {
-    _asFile().writeAsBytesSync(data);
+    referencedFile.writeAsBytesSync(data);
   }
 
   void writeString(String data, { Encoding encoding: null }) {
     if (encoding == null) {
       encoding = SYSTEM_ENCODING;
     }
-    _asFile().writeAsStringSync(data, encoding: encoding);
+    referencedFile.writeAsStringSync(data, encoding: encoding);
   }
-
-  File _asFile() {
-    if (entity is File) {
-      return entity as File;
-    }
-    var e = entity as Link;
-    return new File(e.resolveSymbolicLinksSync());
-  }
-
 }
 
 
+/**
+ * Transforms a list of filenames into a resource collection.  This will
+ * not perform a deep scan of directories.  If the optional `include`
+ * function is not provided, then all entries from the list of filenames
+ * will be added, otherwise the `include` function will be called to test if
+ * each should be included.
+ */
+ResourceCollection filenamesAsCollection(List<String> filenames,
+    { bool include(FileEntityResource resource): null }) {
+  var resources = <Resource>[];
+  for (var name in filenames) {
+    resources.add(filenameToResource(name));
+  }
+  return new SimpleResourceCollection(resources);
+}
 
 
+/**
+ * Inspect the file name, and attempt to assign it to a [Resource], as either
+ * a [FileResource] or a [DirectoryResource].  If the file does not exist,
+ * then it is assumed to be a [FileResource].  If the file is actually a link,
+ * it will be inspected to see if it points to a directory or file.
+ */
+FileEntityResource filenameToResource(String filename) {
+  FileSystemEntityType type = FileSystemEntity.typeSync(filename);
+  if (type == FileSystemEntityType.FILE) {
+    return new FileResource(new File(filename));
+  }
+  if (type == FileSystemEntityType.DIRECTORY) {
+    return new DirectoryResource(new Directory(filename));
+  }
+  if (type == FileSystemEntityType.LINK) {
+    Link link = new Link(filename);
+    if (_isLinkDir(link)) {
+      return new DirectoryResource.fromLink(link);
+    } else {
+      return new FileResource.fromLink(link);
+    }
+  }
+  if (type == FileSystemEntityType.NOT_FOUND) {
+    // Assume a file resource
+    return new FileResource(new File(filename));
+  }
+  throw new Exception("unexpected file system type: " + type.toString());
+}
+
+
+bool _isLinkDir(Link f) {
+  try {
+    String path = f.resolveSymbolicLinksSync();
+    return FileSystemEntity.isDirectorySync(path);
+  } on FileSystemException {
+    // does not point to a real object
+    return false;
+  }
+}

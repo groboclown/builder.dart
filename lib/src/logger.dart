@@ -27,28 +27,207 @@ library builder.logger;
 import 'dart:convert';
 
 import 'target.dart';
+import '../resource.dart';
+
+
+class Logger {
+  final TargetMethod _target;
+  final AbstractLogger _logger;
+
+  Logger(this._target, this._logger);
+
+  void info(String message) {
+    _logger.output(_target, new LogToolMessage(
+      level: INFO, tool: _target.name, message: message));
+  }
+
+  void warn(String message) {
+    _logger.output(_target, new LogToolMessage(
+        level: WARNING, tool: _target.name, message: message));
+  }
+
+  void error(String message) {
+    _logger.output(_target, new LogToolMessage(
+        level: ERROR, tool: _target.name, message: message));
+  }
+
+  void fileInfo({ String tool: "internal",
+      String category: "INTERNAL", String id: "UNKNOWN",
+      Resource file: null, int line: 1, int charStart: 0, int charEnd: 0,
+      String message: null }) {
+    _logger.output(_target, new LogResourceMessage(
+        level: INFO, category: category, id: id, file: file, line: line,
+        charStart: charStart, charEnd: charEnd, message: message));
+  }
+
+  void fileWarn({ String tool: "internal",
+      String category: "INTERNAL", String id: "UNKNOWN",
+      Resource file: null, int line: 1, int charStart: 0, int charEnd: 0,
+      String message: null }) {
+    _logger.output(_target, new LogResourceMessage(
+        level: WARNING, category: category, id: id, file: file, line: line,
+        charStart: charStart, charEnd: charEnd, message: message));
+  }
+
+  void fileError({ String tool: "internal",
+      String category: "INTERNAL", String id: "UNKNOWN",
+      Resource file: null, int line: 1, int charStart: 0, int charEnd: 0,
+      String message: null }) {
+    _logger.output(_target, new LogResourceMessage(
+        level: ERROR, category: category, id: id, file: file, line: line,
+        charStart: charStart, charEnd: charEnd, message: message));
+  }
+
+}
+
+
+const String WARNING = "warning";
+const String ERROR = "error";
+const String INFO = "info";
+const String MAPPING = "mapping";
+
+
+/**
+ * Generic message to log.
+ */
+class LogMessage {
+  String level; // WARNING or ERROR or INFO
+  String message;
+
+  LogMessage({ String level: INFO, String message: null }) :
+      this.level = level,
+      this.message = message;
+
+  Map<String, dynamic> createParams() {
+    return <String, dynamic>{
+      "message": message
+    };
+  }
+}
+
+
+/**
+ * Generic message from a tool.
+ */
+class LogToolMessage extends LogMessage {
+  String tool; // the tool that generated the message
+  String category; // COMPILE_TIME_ERROR, STATIC_WARNING, ...
+  String id; // UNDEFINED_CLASS, UNDEFINED_IDENTIFIER, ...
+
+  LogToolMessage({ String level: INFO, String tool: "internal",
+      String category: "INTERNAL", String id: "UNKNOWN",
+      String message: null }) :
+      this.tool = tool,
+      this.category = category,
+      this.id = id,
+      super(level: level, message: message);
+
+  @override
+  Map<String, dynamic> createParams() {
+    var params = super.createParams();
+    params.addAll(<String, dynamic>{
+      "tool": tool,
+      "category": category,
+      "id": id
+    });
+    return params;
+  }
+
+}
+
+
+/**
+ * A container structure for logging a message about a resource
+ */
+class LogResourceMessage extends LogToolMessage {
+  Resource file;
+  int line; // 1 based
+  int charStart; // 0 based
+  int charEnd; // 0 based
+
+  LogResourceMessage({ String level: INFO, String tool: "internal",
+      String category: "INTERNAL", String id: "UNKNOWN",
+      Resource file: null, int line: 1, int charStart: 0, int charEnd: 0,
+      String message: null }) :
+      this.file = file,
+      this.line = line,
+      this.charStart = charStart,
+      this.charEnd = charEnd,
+      super(level: level, tool: tool, category: category, id: id, message: message);
+
+  @override
+  Map<String, dynamic> createParams() {
+    var params = super.createParams();
+    params.addAll(<String, dynamic>{
+        "file": file.fullName,
+        "line": line,
+        "charStart": charStart,
+        "charEnd": charEnd
+    });
+    return params;
+  }
+
+}
+
+
+/**
+ * Reports on an input resource mapped to an output resource.
+ */
+class LogMappingMessage extends LogMessage {
+  String tool; // the tool that generated the message
+  Resource from;
+  Resource to;
+
+  LogMappingMessage({ String tool: "internal",
+      Resource from: null, Resource to: null }) :
+      this.tool = tool,
+      this.from = from,
+      this.to = to,
+      super(level: MAPPING, message: null);
+
+  @override
+  Map<String, dynamic> createParams() {
+    var params = super.createParams();
+    params.addAll(<String, dynamic>{
+        "tool": tool,
+        "from": from.fullName,
+        "to": to.fullName
+    });
+    return params;
+  }
+
+}
+
+
+
+
+
 
 
 /**
  * Abstract logging method to allow for correct feedback either to the user
  * in the command-line (human readable) or to the Dart Editor (JSON).
  */
-abstract class Logger {
-  abstract void info(TargetMethod tm, String message);
-
-  abstract void warn(TargetMethod tm, String message);
-
-  abstract void error(TargetMethod tm, String message);
+abstract class AbstractLogger {
+  void output(TargetMethod tm, LogMessage message);
 }
 
 
 
-class JsonLogger extends Logger {
+class JsonLogger extends AbstractLogger {
 
+  @override
+  void output(TargetMethod tm, LogMessage message) {
+    // FIXME
+  }
 }
 
 
 
-class CmdLogger extends Logger {
+class CmdLogger extends AbstractLogger {
 
+  @override
+  void output(TargetMethod tm, LogMessage message) {
+    // FIXME
+  }
 }

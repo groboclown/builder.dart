@@ -43,11 +43,6 @@ void make(Type builderClass, List<String> args) {
   var targets = parseTargets(builderClass);
   var buildArgs = new BuildArgs.fromCmd(args, targets);
   var project = new Project.parse(buildArgs);
-  for (var target in buildArgs.calledTargets) {
-    project.buildTarget(target);
-  }
+  project.buildTargets(buildArgs.calledTargets);
 }
-
-
-
 
