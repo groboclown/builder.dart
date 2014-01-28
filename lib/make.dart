@@ -25,7 +25,7 @@
  * The call-in for the build system.
  */
 
-library builder;
+library builder.make;
 
 import 'src/argparser.dart';
 import 'src/project.dart';
@@ -36,7 +36,9 @@ export 'src/target.dart' show target;
 
 
 
-
+/**
+ * Build using a procedural execution.
+ */
 void make(Type builderClass, List<String> args) {
   var targets = parseTargets(builderClass);
   var buildArgs = new BuildArgs.fromCmd(args, targets);
@@ -45,5 +47,7 @@ void make(Type builderClass, List<String> args) {
     project.buildTarget(target);
   }
 }
+
+
 
 
