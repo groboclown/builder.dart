@@ -29,7 +29,8 @@ import 'tool.dart';
 export 'tool.dart' show
     Pipe, BuildTool, addPhase, getTargets,
     PHASE_CLEAN, PHASE_BUILD, PHASE_ASSEMBLE, PHASE_DEPLOY;
-
+import 'resource.dart';
+export 'resource.dart';
 
 
 /**

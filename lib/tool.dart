@@ -49,15 +49,19 @@ export 'src/exceptions.dart' show
 
 import 'src/decl.dart';
 export 'src/decl.dart' show
-  BuildTool, getTargets, addPhase;
+  BuildTool, Pipe, getTargets, addPhase;
 
 import 'src/logger.dart';
 export 'src/logger.dart' show
-  Logger;
+  Logger, LogMessage;
 
 import 'src/project.dart';
 export 'src/project.dart' show
   Project;
+
+import 'src/target.dart';
+export 'src/target.dart' show
+  TargetMethod, target;
 
 const String TARGET_CLEAN = "clean";
 const String TARGET_BUILD = "build";

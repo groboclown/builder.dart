@@ -23,13 +23,13 @@
 
 library builder.resource;
 
+/**
+ * Handles file and other resources used by the build in an abstract way.
+ */
+
 import 'dart:io';
 import 'dart:collection';
 import 'dart:convert';
-
-/**
- * Handles Streams in an abstract way, and manages lists of Streams.
- */
 
 /**
  * Generic definition of a read/write resource.
@@ -164,13 +164,21 @@ class ResourceSet extends ResourceCollection {
 }
 
 
+typedef bool ResourceTest(Resource r);
+
 class ListableResourceColection extends AbstractResourceCollection {
   final ResourceListable res;
+  final ResourceTest resourceTest;
 
-  ListableResourceColection(this.res);
+  ListableResourceColection(this.res,
+    [ this.resourceTest = null ]);
 
   List<Resource> findResources() {
-    return res.list();
+    var ret = res.list();
+    if (resourceTest != null) {
+      ret = ret.where(resourceTest);
+    }
+    return ret;
   }
 
 }
@@ -181,7 +189,7 @@ class ListableResourceColection extends AbstractResourceCollection {
 // File system implementation
 
 
-class FileEntityResource<T extends FileSystemEntity>
+abstract class FileEntityResource<T extends FileSystemEntity>
     extends Resource<DirectoryResource> {
 
   final T entity;
@@ -229,9 +237,6 @@ class FileEntityResource<T extends FileSystemEntity>
   bool get isLink => entity is Link;
 
   @override
-  bool get isDirectory => entity is Directory || (entity is Link && _isLinkDir(entity));
-
-  @override
   DirectoryResource get parent => new DirectoryResource(entity.parent);
 
   @override
@@ -261,6 +266,9 @@ class DirectoryResource extends FileEntityResource<FileSystemEntity>
     referencedDirectory = new Directory(link.resolveSymbolicLinksSync()),
     super(link);
 
+  @override
+  bool get isDirectory => true;
+
   List<FileEntityResource> list() {
     return referencedDirectory.listSync(recursive: false, followLinks: true)
       .map((f) => filenameToResource(f));
@@ -281,6 +289,9 @@ class FileResource extends FileEntityResource<FileSystemEntity> {
   FileResource.fromLink(Link link) :
     referencedFile = new File(link.resolveSymbolicLinksSync()),
     super(link);
+
+  @override
+  bool get isDirectory => false;
 
   List<int> readAsBytes() {
     return referencedFile.readAsBytesSync();
@@ -330,35 +341,39 @@ ResourceCollection filenamesAsCollection(List<String> filenames,
  * it will be inspected to see if it points to a directory or file.
  */
 FileEntityResource filenameToResource(String filename) {
-  FileSystemEntityType type = FileSystemEntity.typeSync(filename);
+  var stripped = filename.trim();
+  if (stripped.length <= 0) {
+    return null;
+  }
+  FileSystemEntityType type = FileSystemEntity.typeSync(stripped);
   if (type == FileSystemEntityType.FILE) {
-    return new FileResource(new File(filename));
+    return new FileResource(new File(stripped));
   }
   if (type == FileSystemEntityType.DIRECTORY) {
-    return new DirectoryResource(new Directory(filename));
+    return new DirectoryResource(new Directory(stripped));
   }
   if (type == FileSystemEntityType.LINK) {
-    Link link = new Link(filename);
-    if (_isLinkDir(link)) {
-      return new DirectoryResource.fromLink(link);
-    } else {
+    Link link = new Link(stripped);
+    try {
+      String path = link.resolveSymbolicLinksSync();
+      if (FileSystemEntity.isDirectorySync(path)) {
+        return new DirectoryResource.fromLink(link);
+      }
+      return new FileResource.fromLink(link);
+    } on FileSystemException {
+      // File does not exist
+      if (stripped.endsWith('/') || stripped.endsWith('\\')) {
+        return new DirectoryResource.fromLink(link);
+      }
       return new FileResource.fromLink(link);
     }
   }
   if (type == FileSystemEntityType.NOT_FOUND) {
-    // Assume a file resource
-    return new FileResource(new File(filename));
+    if (stripped.endsWith('/') || stripped.endsWith('\\')) {
+      return new DirectoryResource(new Directory(stripped));
+    }
+    return new FileResource(new File(stripped));
   }
   throw new Exception("unexpected file system type: " + type.toString());
 }
 
-
-bool _isLinkDir(Link f) {
-  try {
-    String path = f.resolveSymbolicLinksSync();
-    return FileSystemEntity.isDirectorySync(path);
-  } on FileSystemException {
-    // does not point to a real object
-    return false;
-  }
-}

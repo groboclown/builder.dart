@@ -78,6 +78,10 @@ class Logger {
         charStart: charStart, charEnd: charEnd, message: message));
   }
 
+  void message(LogMessage msg) {
+    _logger.output(_target, msg);
+  }
+
 }
 
 
@@ -97,6 +101,34 @@ class LogMessage {
   LogMessage({ String level: INFO, String message: null }) :
       this.level = level,
       this.message = message;
+
+
+  factory LogMessage.tool({ String level: INFO, String tool: "internal",
+      String category: "INTERNAL", String id: "UNKNOWN",
+      String message: null }) {
+    return new LogToolMessage(level: level, tool: tool, category: category,
+      id: id, message: message);
+  }
+
+
+  factory LogMessage.resource({ String level: INFO, String tool: "internal",
+      String category: "INTERNAL", String id: "UNKNOWN",
+      Resource file: null, int line: 1, int charStart: 0, int charEnd: 0,
+      String message: null }) {
+    return new LogResourceMessage(level: level, tool: tool, category: category,
+      id: id, file: file, line: line, charStart: charStart, charEnd: charEnd,
+      message: message);
+  }
+
+
+  factory LogMessage.mapping({ String tool: "internal",
+      Resource from: null, Resource to: null }) {
+    return new LogMappingMessage(tool: tool, from: from, to: to);
+  }
+
+
+
+
 
   Map<String, dynamic> createParams() {
     return <String, dynamic>{
