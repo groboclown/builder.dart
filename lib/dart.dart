@@ -43,8 +43,11 @@ final File DART_ANALYZER_EXEC = new File(DART_BIN.path + "/dartanalyzer");
  * The `packageRoot` is the root directory of the project being built.  It
  * should contain a `packages` directory.
  */
-List<LogMessage> dartAnalyzer(FileResource packageRoot,
-    Resource dartFile, { File cmd: DART_ANALYZER_EXEC }) {
+List<LogMessage> dartAnalyzer(DirectoryResource packageRoot,
+    Resource dartFile, { File cmd: null }) {
+  if (cmd == null) {
+    cmd = DART_ANALYZER_EXEC;
+  }
   var args = <String>['--machine', '--show-package-warnings', '--package-root',
     packageRoot.fullName];
   args.add(dartFile.fullName);
@@ -73,26 +76,33 @@ List<LogMessage> dartAnalyzer(FileResource packageRoot,
 
 class DartAnalyzer extends BuildTool {
   final File cmd;
-  final Directory packageRoot;
+  final DirectoryResource packageRoot;
 
   factory DartAnalyzer(String name,
       { String description: "", String phase: PHASE_BUILD,
-        ResourceCollection dartFiles: null, List<String> depends: <String>[],
+        ResourceCollection dartFiles: null, List<String> depends: null,
         // FIXME use the correct "current directory" call
-        DirectoryResource packageRoot: new DirectoryResource("."),
-        File cmd: DART_ANALYZER_EXEC }) {
+        DirectoryResource packageRoot: null,
+        File cmd: null }) {
+    if (depends == null) {
+      depends = <String>[];
+    }
+    if (packageRoot == null) {
+      packageRoot = ROOT_DIR;
+    }
     var pipe = new Pipe.list(dartFiles.entries(), <Resource>[]);
-    var targetDef = mkTargetDef(name, description, pipe, depends, <String>[]);
+    var targetDef = BuildTool
+      .mkTargetDef(name, description, phase, pipe, depends, <String>[]);
     
     // DEBUG
     print("Creating DartAnalyzer target " + name);
     
-    return new DataAnalyzer._(name, targetDef, phase, pipe, cmd, packageRoot);
+    return new DartAnalyzer._(name, targetDef, phase, pipe, cmd, packageRoot);
   }
 
 
   DartAnalyzer._(String name, target targetDef, String phase, Pipe pipe,
-    File cmd, Directory packageRoot) :
+    File cmd, DirectoryResource packageRoot) :
     this.cmd = cmd, this.packageRoot = packageRoot,
     super(name, targetDef, phase, pipe);
 

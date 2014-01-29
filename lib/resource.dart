@@ -31,6 +31,13 @@ import 'dart:io';
 import 'dart:collection';
 import 'dart:convert';
 
+import 'src/exceptions.dart';
+
+final DirectoryResource ROOT_DIR = new DirectoryResource(Directory.current);
+
+bool CASE_SENSITIVE = true;
+
+
 /**
  * Generic definition of a read/write resource.
  */
@@ -90,6 +97,8 @@ abstract class Resource<T extends ResourceListable> {
 // Mixin class
 abstract class ResourceListable<T extends Resource> {
   List<T> list();
+  
+  T child(String name);
 }
 
 
@@ -171,12 +180,16 @@ class ListableResourceColection extends AbstractResourceCollection {
   final ResourceTest resourceTest;
 
   ListableResourceColection(this.res,
-    [ this.resourceTest = null ]);
+      [ this.resourceTest ]) {
+    if (res == null) {
+      throw new BuildSetupException("null ResourceListable");
+    }
+  }
 
   List<Resource> findResources() {
     var ret = res.list();
     if (resourceTest != null) {
-      ret = ret.where(resourceTest);
+      ret = new List<Resource>.from(ret.where(resourceTest));
     }
     return ret;
   }
@@ -197,13 +210,7 @@ abstract class FileEntityResource<T extends FileSystemEntity>
   FileEntityResource(this.entity);
 
   @override
-  String get name {
-    var path = fullName;
-    for (var m in new RegExp(r'[/\\]([^/\\]+)$').allMatches(path)) {
-      return m;
-    }
-    return path;
-  }
+  String get name => _filenameOf(entity.absolute);
 
   @override
   String get fullName => entity.absolute.path;
@@ -250,6 +257,26 @@ abstract class FileEntityResource<T extends FileSystemEntity>
   }
 
 
+  bool _filenameMatch(String src, String name) {
+    var src = _filenameOf(f);
+    name = name.trim();
+    while (name.endsWith('/') || name.endsWith('\\')) {
+      name = name.substring(0, name.length - 1);
+    }
+    print("Matching `" + src + "` (" + f.path + ") against `" + name + "`");
+    return (CASE_SENSITIVE && src == name) ||
+      (! CASE_SENSITIVE && src.toLowerCase() == name.toLowerCase());
+  }
+  
+  String _filenameOf(FileSystemEntity f) {
+      var path = f.path;
+      var match = new RegExp(r'[/\\]([^/\\]+)$').firstMatch(path);
+      if (match == null || match.group(1) == null) {
+        return path;
+      }
+      return match.group(1);
+  }
+  
 }
 
 
@@ -271,10 +298,15 @@ class DirectoryResource extends FileEntityResource<FileSystemEntity>
 
   @override
   List<FileEntityResource> list() {
-    return referencedDirectory.listSync(recursive: false, followLinks: true)
-      .map((f) => filenameToResource(f));
+    return new List<FileEntityResource>.from(
+        referencedDirectory.listSync(recursive: false, followLinks: true)
+            .map((f) => fileSystemEntityToResource(f)));
   }
 
+  @override
+  FileEntityResource child(String name) {
+    return filenameToResource(fullName + '/' + name);
+  }
 
 }
 
@@ -335,6 +367,40 @@ ResourceCollection filenamesAsCollection(List<String> filenames,
 }
 
 
+
+FileEntityResource fileSystemEntityToResource(FileSystemEntity f) {
+  if (f == null) {
+    return null;
+  }
+  if (f is Directory) {
+    return new DirectoryResource(f);
+  }
+  if (f is File) {
+    return new FileResource(f);
+  }
+  if (f is Link) {
+    var stripped = f.path.trim();
+    Link link = f as Link;
+    try {
+      String path = link.resolveSymbolicLinksSync();
+      if (FileSystemEntity.isDirectorySync(path)) {
+        return new DirectoryResource.fromLink(link);
+      }
+      return new FileResource.fromLink(link);
+    } on FileSystemException {
+      // File does not exist
+      if (stripped.endsWith('/') || stripped.endsWith('\\')) {
+        return new DirectoryResource.fromLink(link);
+      }
+      return new FileResource.fromLink(link);
+    }
+  }
+  throw new BuildSetupException("unexpected file system object: " +
+    f.toString());
+}
+
+
+
 /**
  * Inspect the file name, and attempt to assign it to a [Resource], as either
  * a [FileResource] or a [DirectoryResource].  If the file does not exist,
@@ -375,6 +441,7 @@ FileEntityResource filenameToResource(String filename) {
     }
     return new FileResource(new File(stripped));
   }
-  throw new Exception("unexpected file system type: " + type.toString());
+  throw new BuildSetupException("unexpected file system type: " +
+    type.toString());
 }
 

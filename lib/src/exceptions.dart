@@ -64,6 +64,12 @@ class NoDefaultTargetException extends BuildSetupException {
 }
 
 
+class MultipleDefaultTargetException extends BuildSetupException {
+  MultipleDefaultTargetException() :
+    super("multiple targets defined as `default` in build script");
+}
+
+
 class CyclicTargetDefinitionException extends BuildSetupException {
   final List<String> targetNames;
 

@@ -27,11 +27,13 @@
 
 library builder.src.decl;
 
-import 'dart:io';
+import 'dart:mirrors';
 
 import '../resource.dart';
 import 'target.dart';
 import 'exceptions.dart';
+
+
 
 /**
  * Describes how a [BuildTool] connects with the resources.
@@ -135,8 +137,12 @@ class SimplePipe implements Pipe {
 
 
   SimplePipe.list(List<Resource> inputs, List<Resource> outputs) {
-    _requiredInput.addAll(new Set<Resource>.from(inputs));
-    _output.addAll(new Set<Resource>.from(outputs));
+    if (inputs != null) {
+      _requiredInput.addAll(new Set<Resource>.from(inputs));
+    }
+    if (outputs != null) {
+      _output.addAll(new Set<Resource>.from(outputs));
+    }
   }
 
 
@@ -189,9 +195,9 @@ abstract class BuildTool extends TargetMethod {
   final Pipe pipe;
 
   BuildTool(String name, target targetDef, String phase, Pipe pipe) :
-  this.phase = _PHASES[phase],
-  this.pipe = pipe,
-  super(name, targetDef) {
+      this.phase = _PHASES[phase],
+      this.pipe = pipe,
+      super(name, targetDef) {
 
     _addToPhase(phase, this);
 
@@ -214,7 +220,7 @@ abstract class BuildTool extends TargetMethod {
       throw new NoSuchPhaseException(phase);
     }
     if (_OUTPUT_TARGETS.containsKey(name) || _PHASES.containsKey(name) ||
-        _TOP_PHASE.containsKey(name)) {
+        _TOP_PHASES.containsKey(name)) {
       throw new MultipleTargetsWithSameNameException(name);
     }
 
@@ -225,14 +231,85 @@ abstract class BuildTool extends TargetMethod {
 }
 
 
+class PhaseTarget extends TargetMethod {
+  final List<String> runsBefore;
+  final List<String> runsAfter;
+  
+  factory PhaseTarget(String name, List<String> runsBefore,
+      List<String> runsAfter) {
+    var targetDef = new target.internal(name,
+      <String>[], runsAfter, false);
+    return new PhaseTarget._(name, targetDef, runsBefore, runsAfter);
+  }
+  
+  PhaseTarget._(String name, target targetDef, List<String> runsBefore,
+      List<String> runsAfter) :
+    this.runsBefore = runsBefore,
+    this.runsAfter = runsAfter,
+    super(name, targetDef);
+  
+  
+  void wire(Map<String, PhaseTarget> phaseMap) {
+    // only need to wire up the before, because the after was done at
+    // construction time.
+    for (var before in runsBefore) {
+      var phase = phaseMap[before];
+      if (phase == null) {
+        throw new MissingTargetException(name, before);
+      }
+      // note: duplicates are fine, they are ignored during the
+      // ordering.
+      phase.targetDef.weakDepends.add(name);
+    }
+  }
+  
+  @override
+  void call(Project project);
+}
+
+class TopPhaseTarget extends TargetMethod {
+  factory TopPhaseTarget(String name, PhaseTarget phase, bool isDefault) {
+    var targetDef = new target.internal(name,
+      <String>[], <String>[ phase.name ], isDefault);
+    return new TopPhaseTarget._(name, targetDef);
+  }
+
+  TopPhaseTarget._(String name, target targetDef) :
+    super(name, targetDef);
+
+  @override
+  void call(Project project);
+}
+
+
+
 
 final Map<String, TargetMethod> _OUTPUT_TARGETS = <String, TargetMethod>{};
-final Map<String, TargetMethod> _PHASES = <String, TargetMethod>{};
-final Map<String, TargetMethod> _TOP_PHASE = <String, TargetMethod>{};
+final Map<String, PhaseTarget> _PHASES = <String, PhaseTarget>{};
+final Map<String, TargetMethod> _TOP_PHASES = <String, TargetMethod>{};
 final Map<String, String> _PHASE_NAME_TO_TOP = <String, String>{};
 
 
-List<TargetMethod> getTargets() {
+/**
+ * NOTE: this function is heavily tied to the different data structures
+ * in this file.  Updating the list of targets or phases will mean another
+ * call into this function.
+ */
+List<TargetMethod> getTargets({ libraryName: "build" }) {
+  if (_OUTPUT_TARGETS.isEmpty) {
+    // Assume that all the targets are defined as top-level variables that
+    // are lazy-loaded.
+    for (LibraryMirror library in currentMirrorSystem().libraries.values) {
+      if (MirrorSystem.getName(library.simpleName) == libraryName) {
+        for (DeclarationMirror topLevel in library.declarations.values) {
+          if (topLevel is VariableMirror) {
+            library.getField(topLevel.simpleName);
+          }
+        }
+      }
+    }
+  }
+  
   if (_OUTPUT_TARGETS.isEmpty) {
     stderr.writeString("ERROR: no targets defined.  Did you remember to " +
       "put them inside the build.dart `void main(List<String> args)` " +
@@ -240,10 +317,19 @@ List<TargetMethod> getTargets() {
     exit(2);
   }
   
+  // Wire up the phases
+  for (var phase in _PHASES.values) {
+    phase.wire(_PHASES);
+  }
+  
+  
+  // DEBUG
   print("current targets = " + _OUTPUT_TARGETS.keys.toString());
+  
+  
   var ret = new List<TargetMethod>.from(_OUTPUT_TARGETS.values);
   ret.addAll(_PHASES.values);
-  ret.addAll(_TOP_PHASE.values);
+  ret.addAll(_TOP_PHASES.values);
   print("all targets = " + ret.map((t) => t.name).toString());
   return ret;
 }
@@ -258,20 +344,41 @@ void _connectPipes(BuildTool tool) {
 void _addToPhase(String phaseName, BuildTool tool) {
   var phaseGroup = _PHASES[phaseName];
   phaseGroup.targetDef.weakDepends.add(tool.name);
-  var phaseTarget = _TOP_PHASE[_PHASE_NAME_TO_TOP[phaseName]];
+  var phaseTarget = _TOP_PHASES[_PHASE_NAME_TO_TOP[phaseName]];
   phaseTarget.targetDef.strongDepends.add(tool.name);
 }
 
 
+bool hasDefault = false;
 
+/**
+ * Creates the weak "phase" definition target and a top-level
+ * Phase target.  The top-level target is returned.
+ */
 TargetMethod addPhase(String phaseName, String topTargetName,
-    List<String> runsBefore, List<String> runsAfter) {
-// FIXME insert the phase into the _PHASES list, and connect the runsBefore and runsAfter.
-// The runsBefore and runsAfter are constructed as "weak" references.
-// FIXME construct new phase targets that have a strong reference to the
-// targets in that phase, so that a user can run the phase, rather than
-// the individual targets.
-// FIXME make sure to add the name mapping to _PHASE_NAME_TO_TOP.
-
+    List<String> runsBefore, List<String> runsAfter,
+    { isDefault: false }) {
+  if (isDefault && hasDefault) {
+    throw new MultipleDefaultTargetException();
+  }
+  hasDefault = hasDefault || isDefault;
+  
+  if (_PHASES.containsKey(phaseName)) {
+    throw new MultipleTargetsWithSameNameException(phaseName);
+  }
+  if (_TOP_PHASES.containsKey(topTargetName)) {
+    throw new MultipleTargetsWithSameNameException(topTargetName);
+  }
+  _PHASE_NAME_TO_TOP[phaseName] = topTargetName;
+  
+  // Create the weak targets
+  var phaseTarget = new PhaseTarget(phaseName, runsBefore, runsAfter);
+  _PHASES[phaseName] = phaseTarget;
+  
+  // Create the top-level targets
+  // - It has a weak dependency on the phase, so it will be correctly sorted
+  //   that way.
+  _TOP_PHASES[topTargetName] = new TopPhaseTarget(topTargetName, phaseTarget,
+      isDefault);
 }
 

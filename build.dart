@@ -29,34 +29,30 @@ import 'package:builder/builder.dart';
 // The standard dart language tools
 import 'package:builder/dart.dart';
 
+// --------------------------------------------------------------------
+// Directories and file sets
+final libDir = ROOT_DIR.child("lib/");
+final mainDartSrc = new ListableResourceColection(libDir,
+    (r) => (! r.isDirectory) && r.name.endsWith(".dart"));
+
+final testDir = ROOT_DIR.child("test/");
+final testDartSrc = new ListableResourceColection(testDir,
+    (r) => (! r.isDirectory) && r.name.endsWith(".dart"));
+
+final allDartSrc = new ResourceSet.from([ mainDartSrc, testDartSrc ]);
+
+
+
+// --------------------------------------------------------------------
+// Targets
+
+final dartAnalyzer = new DartAnalyzer("lint",
+    description: "Check the Dart files for language issues",
+    dartFiles: allDartSrc);
 
 
 void main(List<String> args) {
-  // All initialization is inside "main" to prevent lazy-loading issues.
-
-  // --------------------------------------------------------------------
-  // Directories and file sets
-  final rootDir = filenameToResource(".");
-  final libDir = filenameToResource("lib");
-  final mainDartSrc = new ListableResourceColection(libDir,
-      (r) => (! r.isDirectory) && r.name.endsWith(".dart"));
-  
-  final testDir = filenameToResource("test");
-  final testDartSrc = new ListableResourceColection(testDir,
-      (r) => (! r.isDirectory) && r.name.endsWith(".dart"));
-  
-  final allDartSrc = new ResourceSet([ mainDartSrc, testDartSrc ]);
-  
-  
-  
-  // --------------------------------------------------------------------
-  // Targets
-  
-  final dartAnalyzer = new DartAnalyzer("lint",
-      description: "Check the Dart files for language issues",
-      dartFiles: allDartSrc,
-      pacakgeRoot: rootDir);
-
+  // Run the build
   build(args);
 }
 

@@ -47,9 +47,9 @@ export 'src/exceptions.dart' show
   // Only export the top-level exceptions.
   BuildException, BuildSetupException, BuildExecutionException;
 
-import 'src/decl.dart';
+import 'src/decl.dart' as decl;
 export 'src/decl.dart' show
-  BuildTool, Pipe, getTargets, addPhase;
+  BuildTool, Pipe, addPhase;
 
 import 'src/logger.dart';
 export 'src/logger.dart' show
@@ -75,17 +75,32 @@ const String PHASE_ASSEMBLE = "phase_assemble";
 const String PHASE_DEPLOY = "phase_deploy";
 
 
-final TargetMethod TARGET_PHASE_CLEAN = addPhase(PHASE_CLEAN, TARGET_CLEAN,
+
+
+final TargetMethod TARGET_PHASE_CLEAN = decl.addPhase(
+    PHASE_CLEAN, TARGET_CLEAN,
     <String>[ PHASE_BUILD, PHASE_ASSEMBLE, PHASE_DEPLOY ],
     <String>[]);
-final TargetMethod TARGET_PHASE_BUILD = addPhase(PHASE_BUILD, TARGET_BUILD,
+final TargetMethod TARGET_PHASE_BUILD = decl.addPhase(
+    PHASE_BUILD, TARGET_BUILD,
     <String>[ PHASE_ASSEMBLE, PHASE_DEPLOY ],
-    <String>[ PHASE_CLEAN ]);
-final TargetMethod TARGET_PHASE_ASSEMBLE = addPhase(PHASE_ASSEMBLE, TARGET_ASSEMBLE,
+    <String>[ PHASE_CLEAN ],
+    isDefault: true);
+final TargetMethod TARGET_PHASE_ASSEMBLE = decl.addPhase(
+    PHASE_ASSEMBLE, TARGET_ASSEMBLE,
     <String>[ PHASE_DEPLOY ],
     <String>[ PHASE_CLEAN, PHASE_BUILD ]);
-final TargetMethod TARGET_PHASE_DEPLOY = addPhase(PHASE_DEPLOY, TARGET_DEPLOY,
+final TargetMethod TARGET_PHASE_DEPLOY = decl.addPhase(
+    PHASE_DEPLOY, TARGET_DEPLOY,
     <String>[ PHASE_BUILD, PHASE_ASSEMBLE, PHASE_DEPLOY ],
     <String>[]);
 
 
+
+List<TargetMethod> getTargets({ libraryName: "build" }) {
+  // Ensure the default top-level phases exist (avoiding the lazy-loading issue)
+  var throwAway = [ TARGET_PHASE_CLEAN, TARGET_PHASE_BUILD,
+    TARGET_PHASE_ASSEMBLE, TARGET_PHASE_DEPLOY ];
+  
+  return decl.getTargets(libraryName: libraryName);
+}
