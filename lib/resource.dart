@@ -255,7 +255,7 @@ abstract class FileEntityResource<T extends FileSystemEntity>
 
 
 class DirectoryResource extends FileEntityResource<FileSystemEntity>
-    with ResourceListable<FileEntityResource> {
+    implements ResourceListable<FileEntityResource> {
   final Directory referencedDirectory;
 
   DirectoryResource(Directory dir) :
@@ -269,6 +269,7 @@ class DirectoryResource extends FileEntityResource<FileSystemEntity>
   @override
   bool get isDirectory => true;
 
+  @override
   List<FileEntityResource> list() {
     return referencedDirectory.listSync(recursive: false, followLinks: true)
       .map((f) => filenameToResource(f));

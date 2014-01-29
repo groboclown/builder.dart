@@ -29,7 +29,6 @@ import 'package:builder/builder.dart';
 // The standard dart language tools
 import 'package:builder/dart.dart';
 
-
 // --------------------------------------------------------------------
 // Directories and file sets
 final rootDir = filenameToResource(".");
@@ -48,11 +47,10 @@ final allDartSrc = new ResourceSet([ mainDartSrc, testDartSrc ]);
 // --------------------------------------------------------------------
 // Targets
 
-var dartAnalyzer = new DartAnalyzer("lint",
+final dartAnalyzer = new DartAnalyzer("lint",
     description: "Check the Dart files for language issues",
     dartFiles: allDartSrc,
     pacakgeRoot: rootDir);
-
 
 
 

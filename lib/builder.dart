@@ -52,8 +52,9 @@ export 'resource.dart';
 
 
 
-void build(List<String> args) {
-  var buildArgs = new BuildArgs.fromCmd(args, getTargets());
+void build(List<String> args, { libraryName: "build" }) {
+  var buildArgs = new BuildArgs.fromCmd(args,
+    getTargets(libraryName: libraryName));
   var project = new Project.parse(buildArgs);
   project.buildTargets(buildArgs.calledTargets);
 }

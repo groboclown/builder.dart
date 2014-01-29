@@ -27,10 +27,11 @@
 
 library builder.src.decl;
 
+import 'dart:mirrors';
+
 import '../resource.dart';
 import 'target.dart';
 import 'exceptions.dart';
-
 
 /**
  * Describes how a [BuildTool] connects with the resources.
@@ -197,6 +198,7 @@ abstract class BuildTool extends TargetMethod {
     _connectPipes(this);
 
     _OUTPUT_TARGETS[name] = this;
+    print("Registered target `" + name + "` to " + this.toString() + "; current targets = " + _OUTPUT_TARGETS.keys.toString());
   }
 
 
@@ -212,12 +214,12 @@ abstract class BuildTool extends TargetMethod {
       throw new NoSuchPhaseException(phase);
     }
     if (_OUTPUT_TARGETS.containsKey(name) || _PHASES.containsKey(name) ||
-    _TOP_PHASE.containsKey(name)) {
+        _TOP_PHASE.containsKey(name)) {
       throw new MultipleTargetsWithSameNameException(name);
     }
 
     var targetDef = new target.internal(description, dependencies,
-    weakDependencies, false);
+      weakDependencies, false);
     return targetDef;
   }
 }
@@ -229,10 +231,29 @@ final Map<String, TargetMethod> _PHASES = <String, TargetMethod>{};
 final Map<String, TargetMethod> _TOP_PHASE = <String, TargetMethod>{};
 final Map<String, String> _PHASE_NAME_TO_TOP = <String, String>{};
 
-List<TargetMethod> getTargets() {
+
+List<TargetMethod> getTargets({ String libraryName: "build" }) {
+  if (_OUTPUT_TARGETS.isEmpty) {
+    // Assume that all the targets are defined as top-level variables that
+    // are lazy-loaded.
+    
+    for (LibraryMirror library in currentMirrorSystem().libraries.values) {
+      if (MirrorSystem.getName(library.simpleName) == libraryName) {
+        for (DeclarationMirror topLevel in library.declarations.values) {
+          if (topLevel is VariableMirror) {
+            library.getField(topLevel.simpleName);
+          }
+        }
+      }
+    }
+  }
+  
+  // DEBUG
+  print("current targets = " + _OUTPUT_TARGETS.keys.toString());
   var ret = new List<TargetMethod>.from(_OUTPUT_TARGETS.values);
   ret.addAll(_PHASES.values);
   ret.addAll(_TOP_PHASE.values);
+  print("all targets = " + ret.map((t) => t.name).toString());
   return ret;
 }
 
