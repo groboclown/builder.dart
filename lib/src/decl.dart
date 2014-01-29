@@ -27,7 +27,7 @@
 
 library builder.src.decl;
 
-import 'dart:mirrors';
+import 'dart:io';
 
 import '../resource.dart';
 import 'target.dart';
@@ -232,23 +232,14 @@ final Map<String, TargetMethod> _TOP_PHASE = <String, TargetMethod>{};
 final Map<String, String> _PHASE_NAME_TO_TOP = <String, String>{};
 
 
-List<TargetMethod> getTargets({ String libraryName: "build" }) {
+List<TargetMethod> getTargets() {
   if (_OUTPUT_TARGETS.isEmpty) {
-    // Assume that all the targets are defined as top-level variables that
-    // are lazy-loaded.
-    
-    for (LibraryMirror library in currentMirrorSystem().libraries.values) {
-      if (MirrorSystem.getName(library.simpleName) == libraryName) {
-        for (DeclarationMirror topLevel in library.declarations.values) {
-          if (topLevel is VariableMirror) {
-            library.getField(topLevel.simpleName);
-          }
-        }
-      }
-    }
+    stderr.writeString("ERROR: no targets defined.  Did you remember to " +
+      "put them inside the build.dart `void main(List<String> args)` " +
+      "function?");
+    exit(2);
   }
   
-  // DEBUG
   print("current targets = " + _OUTPUT_TARGETS.keys.toString());
   var ret = new List<TargetMethod>.from(_OUTPUT_TARGETS.values);
   ret.addAll(_PHASES.values);
