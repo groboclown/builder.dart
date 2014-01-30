@@ -66,11 +66,11 @@ Your build will have this kind of structure:
     // --------------------------------------------------------------------
     // Directories and file sets
     final libDir = ROOT_DIR.child("lib/");
-    final mainDartSrc = new DeepListableResourceColection.files(libDir,
+    final mainDartSrc = new DeepListableResourceCollection.files(libDir,
         (r) => r.name.endsWith(".dart"));
 
     final testDir = ROOT_DIR.child("test/");
-    final testDartSrc = new DeepListableResourceColection.files(testDir,
+    final testDartSrc = new DeepListableResourceCollection.files(testDir,
         (r) => r.name.endsWith(".dart"));
 
     final allDartSrc = new ResourceSet.from([ mainDartSrc, testDartSrc ]);

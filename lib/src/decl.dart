@@ -382,7 +382,7 @@ TargetMethod addPhase(String phaseName, String topTargetName,
 final Map<Resource, List<BuildTool>> _PIPED_OUTPUT =
   <Resource, List<BuildTool>>{};
 final Map<Resource, List<BuildTool>> _PIPED_INPUT =
-  <Resource, List<BuildTool>>();
+  <Resource, List<BuildTool>>{};
 
 
 

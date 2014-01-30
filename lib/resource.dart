@@ -190,16 +190,16 @@ final ResourceTest DEFAULT_IGNORE_TEST = (f) =>
   ! DEFAULT_IGNORE_NAMES.any((m) => m.hasMatch(f.name));
 
 
-class ListableResourceColection extends AbstractResourceCollection {
+class ListableResourceCollection extends AbstractResourceCollection {
   final ResourceListable res;
   final ResourceTest resourceTest;
 
-  ListableResourceColection(this.res,
+  ListableResourceCollection(this.res,
       [ this.resourceTest ]) {
     if (res == null) {
       throw new BuildSetupException("null ResourceListable");
     }
-    //print("[ListableResourceColection] " + res.toString() + " -> " + res.list().toString());
+    //print("[ListableResourceCollection] " + res.toString() + " -> " + res.list().toString());
   }
 
   List<Resource> findResources() {
@@ -212,11 +212,11 @@ class ListableResourceColection extends AbstractResourceCollection {
 }
 
 
-class DeepListableResourceColection extends ListableResourceColection {
+class DeepListableResourceCollection extends ListableResourceCollection {
   ResourceTest recurseTest;
   
   
-  factory DeepListableResourceColection.files(ResourceListable res,
+  factory DeepListableResourceCollection.files(ResourceListable res,
       ResourceTest fileTest) {
     ResourceTest resTest = (f) =>
         (! f.isDirectory) && fileTest(f);
@@ -226,7 +226,7 @@ class DeepListableResourceColection extends ListableResourceColection {
     //    return (! f.isDirectory) && fileTest(f);
     //};
     ResourceTest recurseTest = DEFAULT_IGNORE_TEST;
-    return new DeepListableResourceColection(res, resTest, recurseTest);
+    return new DeepListableResourceCollection(res, resTest, recurseTest);
   }
   
   
@@ -235,7 +235,7 @@ class DeepListableResourceColection extends ListableResourceColection {
    * the output or not.  `recurseTest` is for deciding whether a
    * [ResourceListable] should have its contents examined.
    */
-  DeepListableResourceColection(ResourceListable res, [ ResourceTest resourceTest,
+  DeepListableResourceCollection(ResourceListable res, [ ResourceTest resourceTest,
     ResourceTest recurseTest ]) :
     this.recurseTest = recurseTest,
     super(res, resourceTest);
