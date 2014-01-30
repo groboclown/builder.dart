@@ -46,20 +46,26 @@ final File DART_ANALYZER_EXEC = new File(DART_BIN.path + "/dartanalyzer" + SHELL
  * should contain a `packages` directory.
  */
 List<LogMessage> dartAnalyzer(DirectoryResource packageRoot,
-    Resource dartFile, { File cmd: null, Set<String> uniqueLines: null }) {
+    Resource dartFile, Project project,
+    { File cmd: null, Set<String> uniqueLines: null }) {
 
   //print("sdk: [" + DART_SDK.path + "]");
 
   if (cmd == null) {
     cmd = DART_ANALYZER_EXEC;
   }
-  var args = <String>['--machine', '--show-package-warnings', '--package-root',
-    packageRoot.fullName];
+  var args = <String>['--machine', '--show-package-warnings'];
+  if (packageRoot != null) {
+    args.add('--package-root');
+    args.add(packageRoot.fullName);
+  }
   args.add(dartFile.fullName);
 
+  project.logger.debug("Running [" + cmd.path + "] with arguments " +
+    args.toString());
   ProcessResult result = Process.runSync(cmd.path, args);
 
-  var ret = <DartAnalyzerResult>[];
+  var ret = <LogMessage>[];
   for (List<String> line in _csvParser(
       result.stdout + "\n" + result.stderr, uniqueLines)) {
     // Don't know what column 6 is for.  It's an int.  Might be the message id.
@@ -71,7 +77,7 @@ List<LogMessage> dartAnalyzer(DirectoryResource packageRoot,
       file: new FileResource(new File(line[3])),
       line: int.parse(line[4]),
       charStart: int.parse(line[5]),
-      charEnd: int.parse(line[6]),
+      charEnd: int.parse(line[5]) + int.parse(line[6]),
       message: line[7]
     );
     ret.add(msg);
@@ -87,14 +93,10 @@ class DartAnalyzer extends BuildTool {
   factory DartAnalyzer(String name,
       { String description: "", String phase: PHASE_BUILD,
         ResourceCollection dartFiles: null, List<String> depends: null,
-        // FIXME use the correct "current directory" call
         DirectoryResource packageRoot: null,
         File cmd: null }) {
     if (depends == null) {
       depends = <String>[];
-    }
-    if (packageRoot == null) {
-      packageRoot = ROOT_DIR;
     }
     
     var pipe = new Pipe.list(dartFiles.entries(), <Resource>[]);
@@ -118,10 +120,10 @@ class DartAnalyzer extends BuildTool {
     for (Resource r in inp) {
       if (r.exists && ! r.isDirectory) {
         project.logger.info("Processing " + r.name);
-        dartAnalyzer(packageRoot, r, cmd: cmd, uniqueLines: uniqueLines)
+        dartAnalyzer(packageRoot, r, project, cmd: cmd, uniqueLines: uniqueLines)
           .forEach((m) => project.logger.message(m));
       } else {
-        project.logger.info("Skipping " + r.name);
+        project.logger.debug("Skipping " + r.name);
       }
     }
   }

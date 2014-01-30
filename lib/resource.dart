@@ -245,7 +245,7 @@ class DeepListableResourceColection extends ListableResourceColection {
     Set<Resource> ret = new Set<Resource>();
     Set<ResourceListable> visited = new Set<ResourceListable>();
     addMore(res, ret, visited);
-    print(res.name + ": " + ret.toString());
+    //print(res.name + ": " + ret.toString());
     return new List<Resource>.from(ret);
   }
   
@@ -257,7 +257,7 @@ class DeepListableResourceColection extends ListableResourceColection {
       if (child is ResourceListable) {
         if (! visited.contains(child) &&
             (recurseTest == null || recurseTest(child))) {
-          addMore(child, ret, visited);
+          addMore(child as ResourceListable, ret, visited);
         }
         //else { print("   skipped " + child.name); }
       } else {
@@ -331,17 +331,6 @@ abstract class FileEntityResource<T extends FileSystemEntity>
     }
   }
 
-
-  bool _filenameMatch(String src, String name) {
-    var src = _filenameOf(f);
-    name = name.trim();
-    while (name.endsWith('/') || name.endsWith('\\')) {
-      name = name.substring(0, name.length - 1);
-    }
-    print("Matching `" + src + "` (" + f.path + ") against `" + name + "`");
-    return (CASE_SENSITIVE && src == name) ||
-      (! CASE_SENSITIVE && src.toLowerCase() == name.toLowerCase());
-  }
   
   String _filenameOf(FileSystemEntity f) {
       var path = f.path;
@@ -455,7 +444,7 @@ FileEntityResource fileSystemEntityToResource(FileSystemEntity f) {
   }
   if (f is Link) {
     var stripped = f.path.trim();
-    Link link = f as Link;
+    Link link = f;
     try {
       String path = link.resolveSymbolicLinksSync();
       if (FileSystemEntity.isDirectorySync(path)) {

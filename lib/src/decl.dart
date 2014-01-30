@@ -27,6 +27,7 @@
 
 library builder.src.decl;
 
+import 'dart:io';
 import 'dart:mirrors';
 
 import '../resource.dart';
@@ -317,7 +318,7 @@ List<TargetMethod> getTargets({ libraryName: "build" }) {
   }
   
   if (_OUTPUT_TARGETS.isEmpty) {
-    stderr.writeString("ERROR: no targets defined.  Did you remember to " +
+    stderr.writeAsString("ERROR: no targets defined.  Did you remember to " +
       "put them inside the build.dart `void main(List<String> args)` " +
       "function?");
     exit(2);

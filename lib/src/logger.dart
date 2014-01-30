@@ -36,6 +36,11 @@ class Logger {
 
   Logger(this._target, this._logger);
 
+  void debug(String message) {
+    // for now, nothing is done.  Eventually a
+    // "log level" will be added.
+  }
+  
   void info(String message) {
     _logger.output(_target, new LogToolMessage(
       level: INFO, tool: _target.name, message: message));
@@ -251,7 +256,8 @@ class JsonLogger extends AbstractLogger {
 
   @override
   void output(TargetMethod tm, LogMessage message) {
-    // FIXME send data to a JSON encoded message in stdout.
+    print('[{"method":"' + message.level + '","params":' +
+        JSON.encode(message.createParams()) + '}]');
   }
 }
 
@@ -265,7 +271,7 @@ class CmdLogger extends AbstractLogger {
     print(message.level.substring(0, 4).toUpperCase() + " [" + tm.name + "] " +
       message.message);
     if (message is LogResourceMessage) {
-      var rm = message as LogResourceMessage;
+      var rm = message;
       print("   in " + rm.file.fullName + ", line " + rm.line.toString() +
         ", col " + (rm.charStart + 1).toString() + "-" +
         (rm.charEnd + 1).toString());

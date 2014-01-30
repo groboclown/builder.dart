@@ -42,7 +42,7 @@ library builder.tool;
 
 // Make a few private items publicly available.
 
-import 'src/exceptions.dart';
+//import 'src/exceptions.dart';
 export 'src/exceptions.dart' show
   // Only export the top-level exceptions.
   BuildException, BuildSetupException, BuildExecutionException;
@@ -51,11 +51,11 @@ import 'src/decl.dart' as decl;
 export 'src/decl.dart' show
   BuildTool, Pipe, addPhase;
 
-import 'src/logger.dart';
+//import 'src/logger.dart';
 export 'src/logger.dart' show
   Logger, LogMessage;
 
-import 'src/project.dart';
+//import 'src/project.dart';
 export 'src/project.dart' show
   Project;
 
