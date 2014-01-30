@@ -32,12 +32,12 @@ import 'package:builder/dart.dart';
 // --------------------------------------------------------------------
 // Directories and file sets
 final libDir = ROOT_DIR.child("lib/");
-final mainDartSrc = new ListableResourceColection(libDir,
-    (r) => (! r.isDirectory) && r.name.endsWith(".dart"));
+final mainDartSrc = new DeepListableResourceColection.files(libDir,
+    (r) => r.name.endsWith(".dart"));
 
 final testDir = ROOT_DIR.child("test/");
-final testDartSrc = new ListableResourceColection(testDir,
-    (r) => (! r.isDirectory) && r.name.endsWith(".dart"));
+final testDartSrc = new DeepListableResourceColection.files(testDir,
+    (r) => r.name.endsWith(".dart"));
 
 final allDartSrc = new ResourceSet.from([ mainDartSrc, testDartSrc ]);
 

@@ -107,15 +107,14 @@ class Project {
     // tree if this is the first target run.
     for (TargetMethod tm in _dependencyList(targets, _invokedTargets.isEmpty)) {
       if (! _invokedTargets.contains(tm)) {
-        _invokedTargets.add(tm);
-
         // This could be a future, as long as the dependency list is honored
         // and checked for completion before running.  It would mean changing
         // the _invokedTargets to instead be a Map of futures.
 
         Project child = new _ChildProject(this, tm);
+        child.logger.info("begin");
         tm.call(child);
-
+        child.logger.info("end");
       }
     }
   }
@@ -192,7 +191,7 @@ class Project {
         }
       }
     }
-    return tmRet;
+    return new List<TargetMethod>.from(tmRet);
   }
 
 
@@ -202,10 +201,15 @@ class Project {
   void _tsort(_TargetOrder root, Map<_TargetOrder, _TOPO_STATE> state,
       Map<String, _TargetOrder> orders, List<String> visiting,
       List<_TargetOrder> ret) {
+    // DEBUG topo sort
+    //print("topo-sort on " + root.tm.name);
     state[root] = _TOPO_STATE.VISITING;
     visiting.add(root.tm.name);
 
     for (var dependentName in root.tm.runsAfter) {
+      // DEBUG topo sort
+      //print("   " + root.tm.name + " -> " + dependentName +
+      //  (root.tm.targetDef.weakDepends.contains(dependentName) ? " (weak)" : ""));
       if (! orders.containsKey(dependentName)) {
         throw new MissingTargetException(root.tm.name, dependentName);
       }

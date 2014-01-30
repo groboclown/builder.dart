@@ -32,6 +32,7 @@ import 'dart:mirrors';
 import '../resource.dart';
 import 'target.dart';
 import 'exceptions.dart';
+import 'project.dart';
 
 
 
@@ -204,7 +205,8 @@ abstract class BuildTool extends TargetMethod {
     _connectPipes(this);
 
     _OUTPUT_TARGETS[name] = this;
-    print("Registered target `" + name + "` to " + this.toString() + "; current targets = " + _OUTPUT_TARGETS.keys.toString());
+    // DEBUG
+    //print("Registered target `" + name + "` to " + this.toString() + "; current targets = " + _OUTPUT_TARGETS.keys.toString());
   }
 
 
@@ -232,39 +234,43 @@ abstract class BuildTool extends TargetMethod {
 
 
 class PhaseTarget extends TargetMethod {
-  final List<String> runsBefore;
-  final List<String> runsAfter;
+  final List<String> phaseRunsBefore;
+  final List<String> phaseRunsAfter;
   
-  factory PhaseTarget(String name, List<String> runsBefore,
-      List<String> runsAfter) {
+  factory PhaseTarget(String name, List<String> phaseRunsBefore,
+      List<String> phaseRunsAfter) {
     var targetDef = new target.internal(name,
-      <String>[], runsAfter, false);
-    return new PhaseTarget._(name, targetDef, runsBefore, runsAfter);
+      <String>[], phaseRunsAfter, false);
+    return new PhaseTarget._(name, targetDef, phaseRunsBefore, phaseRunsAfter);
   }
   
-  PhaseTarget._(String name, target targetDef, List<String> runsBefore,
-      List<String> runsAfter) :
-    this.runsBefore = runsBefore,
-    this.runsAfter = runsAfter,
+  PhaseTarget._(String name, target targetDef, List<String> phaseRunsBefore,
+      List<String> phaseRunsAfter) :
+    this.phaseRunsBefore = phaseRunsBefore,
+    this.phaseRunsAfter = phaseRunsAfter,
     super(name, targetDef);
   
   
   void wire(Map<String, PhaseTarget> phaseMap) {
     // only need to wire up the before, because the after was done at
     // construction time.
-    for (var before in runsBefore) {
+    for (var before in phaseRunsBefore) {
       var phase = phaseMap[before];
       if (phase == null) {
         throw new MissingTargetException(name, before);
       }
       // note: duplicates are fine, they are ignored during the
       // ordering.
+      //print("--Wiring " + name + " as dependency for " + phase.name);
+      if (targetDef.weakDepends.contains(phase.name)) {
+        throw new Exception("added ourself when it shouldn't have");
+      }
       phase.targetDef.weakDepends.add(name);
     }
   }
   
   @override
-  void call(Project project);
+  void call(Project project) {}
 }
 
 class TopPhaseTarget extends TargetMethod {
@@ -278,7 +284,7 @@ class TopPhaseTarget extends TargetMethod {
     super(name, targetDef);
 
   @override
-  void call(Project project);
+  void call(Project project) {}
 }
 
 
@@ -322,15 +328,9 @@ List<TargetMethod> getTargets({ libraryName: "build" }) {
     phase.wire(_PHASES);
   }
   
-  
-  // DEBUG
-  print("current targets = " + _OUTPUT_TARGETS.keys.toString());
-  
-  
   var ret = new List<TargetMethod>.from(_OUTPUT_TARGETS.values);
   ret.addAll(_PHASES.values);
   ret.addAll(_TOP_PHASES.values);
-  print("all targets = " + ret.map((t) => t.name).toString());
   return ret;
 }
 
@@ -356,7 +356,7 @@ bool hasDefault = false;
  * Phase target.  The top-level target is returned.
  */
 TargetMethod addPhase(String phaseName, String topTargetName,
-    List<String> runsBefore, List<String> runsAfter,
+    List<String> phaseRunsBefore, List<String> phaseRunsAfter,
     { isDefault: false }) {
   if (isDefault && hasDefault) {
     throw new MultipleDefaultTargetException();
@@ -372,7 +372,7 @@ TargetMethod addPhase(String phaseName, String topTargetName,
   _PHASE_NAME_TO_TOP[phaseName] = topTargetName;
   
   // Create the weak targets
-  var phaseTarget = new PhaseTarget(phaseName, runsBefore, runsAfter);
+  var phaseTarget = new PhaseTarget(phaseName, phaseRunsBefore, phaseRunsAfter);
   _PHASES[phaseName] = phaseTarget;
   
   // Create the top-level targets

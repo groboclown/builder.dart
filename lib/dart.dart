@@ -33,10 +33,12 @@ import 'tool.dart';
  * Methods to invoke the commands distributed with the dart sdk.
  */
 
-
-final Directory DART_HOME = new Directory(Platform.environment['DART_HOME']);
-final Directory DART_BIN = new Directory(DART_HOME.path + "/bin");
-final File DART_ANALYZER_EXEC = new File(DART_BIN.path + "/dartanalyzer");
+// FIXME if windows, add a ".exe", otherwise leave as-is
+final String EXEC_EXT = (Platform.isWindows ? ".exe" : "");
+final String SHELL_EXT = (Platform.isWindows ? ".bat" : "");
+final Directory DART_SDK = new Directory(Platform.environment['DART_SDK']);
+final Directory DART_BIN = new Directory(DART_SDK.path + "/bin");
+final File DART_ANALYZER_EXEC = new File(DART_BIN.path + "/dartanalyzer" + SHELL_EXT).absolute;
 
 
 /**
@@ -44,7 +46,10 @@ final File DART_ANALYZER_EXEC = new File(DART_BIN.path + "/dartanalyzer");
  * should contain a `packages` directory.
  */
 List<LogMessage> dartAnalyzer(DirectoryResource packageRoot,
-    Resource dartFile, { File cmd: null }) {
+    Resource dartFile, { File cmd: null, Set<String> uniqueLines: null }) {
+
+  //print("sdk: [" + DART_SDK.path + "]");
+
   if (cmd == null) {
     cmd = DART_ANALYZER_EXEC;
   }
@@ -55,12 +60,13 @@ List<LogMessage> dartAnalyzer(DirectoryResource packageRoot,
   ProcessResult result = Process.runSync(cmd.path, args);
 
   var ret = <DartAnalyzerResult>[];
-  for (List<String> line in _csvParser(result.stdout)) {
+  for (List<String> line in _csvParser(
+      result.stdout + "\n" + result.stderr, uniqueLines)) {
     // Don't know what column 6 is for.  It's an int.  Might be the message id.
     var msg = new LogMessage.resource(
       level: line[0].toLowerCase(),
       tool: "dartanalyzer",
-      catgegory: line[1],
+      category: line[1],
       id: line[2],
       file: new FileResource(new File(line[3])),
       line: int.parse(line[4]),
@@ -90,13 +96,10 @@ class DartAnalyzer extends BuildTool {
     if (packageRoot == null) {
       packageRoot = ROOT_DIR;
     }
+    
     var pipe = new Pipe.list(dartFiles.entries(), <Resource>[]);
     var targetDef = BuildTool
       .mkTargetDef(name, description, phase, pipe, depends, <String>[]);
-    
-    // DEBUG
-    print("Creating DartAnalyzer target " + name);
-    
     return new DartAnalyzer._(name, targetDef, phase, pipe, cmd, packageRoot);
   }
 
@@ -109,12 +112,16 @@ class DartAnalyzer extends BuildTool {
 
   @override
   void call(Project project) {
-    List<Resource> inp = new List<Resource>.from(pipe.requiredInput);
+    var inp = new List<Resource>.from(pipe.requiredInput);
     inp.addAll(pipe.optionalInput);
+    var uniqueLines = new Set<String>();
     for (Resource r in inp) {
       if (r.exists && ! r.isDirectory) {
-        dartAnalyzer(packageRoot, r, cmd: cmd)
+        project.logger.info("Processing " + r.name);
+        dartAnalyzer(packageRoot, r, cmd: cmd, uniqueLines: uniqueLines)
           .forEach((m) => project.logger.message(m));
+      } else {
+        project.logger.info("Skipping " + r.name);
       }
     }
   }
@@ -124,14 +131,21 @@ class DartAnalyzer extends BuildTool {
 
 
 
-List<List<String>> _csvParser(String data) {
+List<List<String>> _csvParser(String data, Set<String> uniqueLines) {
   var splitter = new LineSplitter();
   var ret = <List<String>>[];
   // FIXME This isn't right - need to unescape newlines that could join a cell
   for (String line in splitter.convert(data)) {
-    var row = <String>[];
-    for (String cell in line.split('|')) {
-      row.add(cell.replaceAll(new RegExp(r'\\\\'), '\\'));
+    if (! line.isEmpty &&
+        (uniqueLines == null || ! uniqueLines.contains(line))) {
+      if (uniqueLines != null) {
+        uniqueLines.add(line);
+      }
+      var row = <String>[];
+      for (String cell in line.split('|')) {
+        row.add(cell.replaceAll(new RegExp(r'\\\\'), '\\'));
+      }
+      ret.add(row);
     }
   }
   return ret;

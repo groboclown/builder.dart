@@ -92,8 +92,8 @@ final TargetMethod TARGET_PHASE_ASSEMBLE = decl.addPhase(
     <String>[ PHASE_CLEAN, PHASE_BUILD ]);
 final TargetMethod TARGET_PHASE_DEPLOY = decl.addPhase(
     PHASE_DEPLOY, TARGET_DEPLOY,
-    <String>[ PHASE_BUILD, PHASE_ASSEMBLE, PHASE_DEPLOY ],
-    <String>[]);
+    <String>[],
+    <String>[ PHASE_CLEAN, PHASE_BUILD, PHASE_ASSEMBLE ]);
 
 
 

@@ -215,7 +215,8 @@ class LogMappingMessage extends LogMessage {
       this.tool = tool,
       this.from = from,
       this.to = to,
-      super(level: MAPPING, message: null);
+      super(level: MAPPING, message: "mapped `" + from.toString() +
+        "` to `" + to.toString() + "`");
 
   @override
   Map<String, dynamic> createParams() {
@@ -250,7 +251,7 @@ class JsonLogger extends AbstractLogger {
 
   @override
   void output(TargetMethod tm, LogMessage message) {
-    // FIXME
+    // FIXME send data to a JSON encoded message in stdout.
   }
 }
 
@@ -260,6 +261,14 @@ class CmdLogger extends AbstractLogger {
 
   @override
   void output(TargetMethod tm, LogMessage message) {
-    // FIXME
+    var params = message.createParams();
+    print(message.level.substring(0, 4).toUpperCase() + " [" + tm.name + "] " +
+      message.message);
+    if (message is LogResourceMessage) {
+      var rm = message as LogResourceMessage;
+      print("   in " + rm.file.fullName + ", line " + rm.line.toString() +
+        ", col " + (rm.charStart + 1).toString() + "-" +
+        (rm.charEnd + 1).toString());
+    }
   }
 }

@@ -91,10 +91,15 @@ abstract class Resource<T extends ResourceListable> {
     }
     return fullName == t.fullName;
   }
+  
+  @override
+  String toString() {
+    return fullName;
+  }
 }
 
 
-// Mixin class
+// Interface
 abstract class ResourceListable<T extends Resource> {
   List<T> list();
   
@@ -168,12 +173,22 @@ class ResourceSet extends ResourceCollection {
     for (ResourceCollection rc in _children) {
       ret.addAll(rc.entries());
     }
+    return ret;
   }
 
 }
 
 
 typedef bool ResourceTest(Resource r);
+
+final List<RegExp> DEFAULT_IGNORE_NAMES = <RegExp>[
+    new RegExp(r"^CVS$"),
+    new RegExp(r"^\..*$")
+];
+
+final ResourceTest DEFAULT_IGNORE_TEST = (f) =>
+  ! DEFAULT_IGNORE_NAMES.any((m) => m.hasMatch(f.name));
+
 
 class ListableResourceColection extends AbstractResourceCollection {
   final ResourceListable res;
@@ -184,6 +199,7 @@ class ListableResourceColection extends AbstractResourceCollection {
     if (res == null) {
       throw new BuildSetupException("null ResourceListable");
     }
+    //print("[ListableResourceColection] " + res.toString() + " -> " + res.list().toString());
   }
 
   List<Resource> findResources() {
@@ -193,8 +209,67 @@ class ListableResourceColection extends AbstractResourceCollection {
     }
     return ret;
   }
-
 }
+
+
+class DeepListableResourceColection extends ListableResourceColection {
+  ResourceTest recurseTest;
+  
+  
+  factory DeepListableResourceColection.files(ResourceListable res,
+      ResourceTest fileTest) {
+    ResourceTest resTest = (f) =>
+        (! f.isDirectory) && fileTest(f);
+    //ResourceTest resTest = (f) {
+    //    print("Checking " + f.name + ": directory? " + f.isDirectory.toString() + "; fileTest? " + fileTest(f).toString());
+    //    if (f.isDirectory && ! (f is DirectoryResource)) { print(" - but it's not a DirectoryResource!"); }
+    //    return (! f.isDirectory) && fileTest(f);
+    //};
+    ResourceTest recurseTest = DEFAULT_IGNORE_TEST;
+    return new DeepListableResourceColection(res, resTest, recurseTest);
+  }
+  
+  
+  /**
+   * `resourceTest` is for deciding whether a [Resource] should be added to
+   * the output or not.  `recurseTest` is for deciding whether a
+   * [ResourceListable] should have its contents examined.
+   */
+  DeepListableResourceColection(ResourceListable res, [ ResourceTest resourceTest,
+    ResourceTest recurseTest ]) :
+    this.recurseTest = recurseTest,
+    super(res, resourceTest);
+  
+
+  List<Resource> findResources() {
+    Set<Resource> ret = new Set<Resource>();
+    Set<ResourceListable> visited = new Set<ResourceListable>();
+    addMore(res, ret, visited);
+    print(res.name + ": " + ret.toString());
+    return new List<Resource>.from(ret);
+  }
+  
+  void addMore(ResourceListable listable, Set<Resource> ret,
+      Set<ResourceListable> visited) {
+    visited.add(listable);
+    //print(res.name + "->" + listable.name);
+    for (Resource child in listable.list()) {
+      if (child is ResourceListable) {
+        if (! visited.contains(child) &&
+            (recurseTest == null || recurseTest(child))) {
+          addMore(child, ret, visited);
+        }
+        //else { print("   skipped " + child.name); }
+      } else {
+        //print("    <="+child.name);
+        ret.add(child);
+      }
+    }
+  }
+  
+}
+
+
 
 
 
