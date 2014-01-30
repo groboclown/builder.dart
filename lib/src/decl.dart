@@ -318,7 +318,7 @@ List<TargetMethod> getTargets({ libraryName: "build" }) {
   }
   
   if (_OUTPUT_TARGETS.isEmpty) {
-    stderr.writeAsString("ERROR: no targets defined.  Did you remember to " +
+    stderr.writeln("ERROR: no targets defined.  Did you remember to " +
       "put them inside the build.dart `void main(List<String> args)` " +
       "function?");
     exit(2);
