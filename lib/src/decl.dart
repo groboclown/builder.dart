@@ -206,8 +206,6 @@ abstract class BuildTool extends TargetMethod {
     _connectPipes(this);
 
     _OUTPUT_TARGETS[name] = this;
-    // DEBUG
-    //print("Registered target `" + name + "` to " + this.toString() + "; current targets = " + _OUTPUT_TARGETS.keys.toString());
   }
 
 
@@ -282,6 +280,29 @@ class TopPhaseTarget extends TargetMethod {
   }
 
   TopPhaseTarget._(String name, target targetDef) :
+    super(name, targetDef);
+
+  @override
+  void call(Project project) {}
+}
+
+class VirtualTarget extends TargetMethod {
+  factory VirtualTarget(String name, String description,
+      List<String> dependencies, List<String> weakDependencies) {
+    if (dependencies == null) {
+      dependencies = <String>[];
+    }
+    if (weakDependencies == null) {
+      weakDependencies = <String>[];
+    }
+    var targetDef = new target.internal(description,
+      dependencies, weakDependencies, false);
+    var ret = new VirtualTarget._(name, targetDef);
+    _OUTPUT_TARGETS[name] = ret;
+    return ret;
+  }
+
+  VirtualTarget._(String name, target targetDef) :
     super(name, targetDef);
 
   @override

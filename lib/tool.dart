@@ -94,13 +94,16 @@ final TargetMethod TARGET_PHASE_DEPLOY = decl.addPhase(
     PHASE_DEPLOY, TARGET_DEPLOY,
     <String>[],
     <String>[ PHASE_CLEAN, PHASE_BUILD, PHASE_ASSEMBLE ]);
-
+final TargetMethod TARGET_FULL = new decl.VirtualTarget(
+    "full", "the complete build",
+    <String>[ TARGET_CLEAN, TARGET_BUILD, TARGET_ASSEMBLE, TARGET_DEPLOY ],
+    <String>[]);
 
 
 List<TargetMethod> getTargets({ libraryName: "build" }) {
   // Ensure the default top-level phases exist (avoiding the lazy-loading issue)
   var throwAway = [ TARGET_PHASE_CLEAN, TARGET_PHASE_BUILD,
-    TARGET_PHASE_ASSEMBLE, TARGET_PHASE_DEPLOY ];
-  
+    TARGET_PHASE_ASSEMBLE, TARGET_PHASE_DEPLOY, TARGET_FULL ];
+
   return decl.getTargets(libraryName: libraryName);
 }

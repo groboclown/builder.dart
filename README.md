@@ -20,7 +20,7 @@ The tool is just in the beginnings, but already it builds itself.
 Adding The Builder To Your Project
 ==================================
 
-No metter if you go the procedural or declarative route, you first need to add
+Regardless of whether you go the procedural or declarative route, you first need to add
 the builder library to your `pubspec.yaml` file in the `dev_dependencies` section.
 
     name: my_app
