@@ -202,7 +202,8 @@ class Project {
       Map<String, _TargetOrder> orders, List<String> visiting,
       List<_TargetOrder> ret) {
     // DEBUG topo sort
-    //print("topo-sort on " + root.tm.name);
+    //print("topo-sort->" + root.tm.name);
+    
     state[root] = _TOPO_STATE.VISITING;
     visiting.add(root.tm.name);
 
@@ -210,6 +211,7 @@ class Project {
       // DEBUG topo sort
       //print("   " + root.tm.name + " -> " + dependentName +
       //  (root.tm.targetDef.weakDepends.contains(dependentName) ? " (weak)" : ""));
+      
       if (! orders.containsKey(dependentName)) {
         throw new MissingTargetException(root.tm.name, dependentName);
       }
@@ -233,6 +235,9 @@ class Project {
     }
     state[root] = _TOPO_STATE.VISITED;
     ret.add(root);
+    
+    // DEBUG topo sort
+    //print("topo-sort<- "+root.tm.name);
   }
 
 }

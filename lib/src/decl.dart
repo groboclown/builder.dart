@@ -274,8 +274,11 @@ class PhaseTarget extends TargetMethod {
 
 class TopPhaseTarget extends TargetMethod {
   factory TopPhaseTarget(String name, PhaseTarget phase, bool isDefault) {
-    var targetDef = new target.internal(name,
-      <String>[], <String>[ phase.name ], isDefault);
+    var targetDef = new target.internal(name, <String>[],
+      // we don't need a weak link to the phase, because the phase's targets
+      // are added as strong dependencies to this top target.
+      <String>[],
+      isDefault);
     return new TopPhaseTarget._(name, targetDef);
   }
 
@@ -288,7 +291,8 @@ class TopPhaseTarget extends TargetMethod {
 
 class VirtualTarget extends TargetMethod {
   factory VirtualTarget(String name, String description,
-      List<String> dependencies, List<String> weakDependencies) {
+      List<String> dependencies, List<String> weakDependencies,
+      [ bool isTop = false ]) {
     if (dependencies == null) {
       dependencies = <String>[];
     }
@@ -298,7 +302,11 @@ class VirtualTarget extends TargetMethod {
     var targetDef = new target.internal(description,
       dependencies, weakDependencies, false);
     var ret = new VirtualTarget._(name, targetDef);
-    _OUTPUT_TARGETS[name] = ret;
+    if (isTop) {
+      _TOP_PHASES[name] = ret;
+    } else {
+      _OUTPUT_TARGETS[name] = ret;
+    }
     return ret;
   }
 
@@ -308,7 +316,6 @@ class VirtualTarget extends TargetMethod {
   @override
   void call(Project project) {}
 }
-
 
 
 
@@ -363,6 +370,9 @@ void _addToPhase(String phaseName, BuildTool tool) {
   phaseGroup.targetDef.weakDepends.add(tool.name);
   var phaseTarget = _TOP_PHASES[_PHASE_NAME_TO_TOP[phaseName]];
   phaseTarget.targetDef.strongDepends.add(tool.name);
+  
+  // DEBUG topo sort
+  //print("topo-sort -- added " + tool.name + " as dependent to " + phaseTarget.name);
 }
 
 

@@ -97,7 +97,7 @@ final TargetMethod TARGET_PHASE_DEPLOY = decl.addPhase(
 final TargetMethod TARGET_FULL = new decl.VirtualTarget(
     "full", "the complete build",
     <String>[ TARGET_CLEAN, TARGET_BUILD, TARGET_ASSEMBLE, TARGET_DEPLOY ],
-    <String>[]);
+    <String>[], true);
 
 
 List<TargetMethod> getTargets({ libraryName: "build" }) {
