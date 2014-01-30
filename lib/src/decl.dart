@@ -336,11 +336,6 @@ List<TargetMethod> getTargets({ libraryName: "build" }) {
 }
 
 
-void _connectPipes(BuildTool tool) {
-// FIXME connect this new tool to the list of existing output targets.
-// Take special care with outputs that are shared by tools.
-}
-
 
 void _addToPhase(String phaseName, BuildTool tool) {
   var phaseGroup = _PHASES[phaseName];
@@ -381,5 +376,26 @@ TargetMethod addPhase(String phaseName, String topTargetName,
   //   that way.
   _TOP_PHASES[topTargetName] = new TopPhaseTarget(topTargetName, phaseTarget,
       isDefault);
+}
+
+
+final Map<Resource, List<BuildTool>> _PIPED_OUTPUT =
+  <Resource, List<BuildTool>>{};
+final Map<Resource, List<BuildTool>> _PIPED_INPUT =
+  <Resource, List<BuildTool>>();
+
+
+
+void _connectPipes(BuildTool tool) {
+// FIXME connect this new tool to the list of existing output targets.
+// Take special care with outputs that are shared by tools.
+}
+
+
+List<BuildTool> forwardChain(List<Resource> changedResources) {
+// FIXME construct the ordered build tools that should run if the given
+// resources have changed since the last build.  This is a forward
+// chain of targets based on the pipe connections that still must maintain
+// the dependency graph ordering.
 }
 

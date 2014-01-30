@@ -1,18 +1,16 @@
 builder.dart
 ============
 
-General build tool for Dart projects.
+General build tool for Dart projects.  It supports both a *procedural* and *declarative* style.
 
 
 
 Status
 ======
 
-The tool is just in the beginnings.  The basic API has been established.
+The tool is just in the beginnings, but already it builds itself.
 
-* Need to create the loggers to be compatible with both the machine interface and human interface.
 * Add more helper libraries to make creation of builds easier: dart, dart2js, pub, zip, unzip.
-* Currently, this is using a procedural build process.  Work has begun to allow for a declarative build process.
 * Update this documentation as work progresses.
 * Add support for testing frameworks like DumpRenderTree (used by Dart team's [web-ui](https://github.com/dart-lang/web-ui) project)
 * Work on publicity and integration with tools like [drone.io](http://docs.drone.io/dart.html)
@@ -22,21 +20,85 @@ The tool is just in the beginnings.  The basic API has been established.
 Adding The Builder To Your Project
 ==================================
 
-You first need to add the builder library to your `pubspec.yaml` file:
+No metter if you go the procedural or declarative route, you first need to add
+the builder library to your `pubspec.yaml` file in the `dev_dependencies` section.
 
     name: my_app
     author: You
     version: 1.0.0
     description: My App
-    dependencies:
-      args: ">=0.9.0"
 
     dev_dependencies:
       builder: ">=0.0.1"
-      unittest: ">=0.9.3"
 
-Because the library is only used to build the project, it should belong in the
-`dev_dependencies` section, not `dependencies`.
+The library belongs in the `dev_dependencies` section, not `dependencies`,
+because it is only used to build the project.
+
+Next, you need to decide if you're going to take the procedural or declarative
+route, and make your build file accordingly.
+
+
+Declarative
+-----------
+
+A *declarative* build works by declaring what build actions depend on each other,
+then it's up to the build library to decide what should actually be run.  You lose
+a bit of clarity in the build (the execution plan is no longer just top to bottom),
+but you don't need to worry about lots of minute details.
+
+The build structure is broken into phases, which are major groupings of events.  By
+default, there's _clean_, _build_, _assemble_, and _deploy_ (defined in
+`builder/tool.dart`).  Then, each build target defines which phase it run in,
+and a connection of resources it consumes and resources it generates.  These two
+definitions give the build target an implicit ordering.
+
+Your build will have this kind of structure:
+
+    // the build file should be in the "build" library
+    library build;
+
+    // The build library
+    import 'package:builder/builder.dart';
+
+    // The standard dart language tools
+    import 'package:builder/dart.dart';
+
+    // --------------------------------------------------------------------
+    // Directories and file sets
+    final libDir = ROOT_DIR.child("lib/");
+    final mainDartSrc = new DeepListableResourceColection.files(libDir,
+        (r) => r.name.endsWith(".dart"));
+
+    final testDir = ROOT_DIR.child("test/");
+    final testDartSrc = new DeepListableResourceColection.files(testDir,
+        (r) => r.name.endsWith(".dart"));
+
+    final allDartSrc = new ResourceSet.from([ mainDartSrc, testDartSrc ]);
+
+    // --------------------------------------------------------------------
+    // Targets
+
+    final dartAnalyzer = new DartAnalyzer("lint",
+        description: "Check the Dart files for language issues",
+        dartFiles: allDartSrc);
+
+    
+    // Run the build
+    void main(List<String> args) {
+      build(args);
+    }
+
+Each constructed build tool in the `build` library will be picked up as a
+target to run.
+
+
+Procedural
+----------
+
+
+You first need to add the builder library to your `pubspec.yaml` file:
+
+
 
 Note: due to this change, any build of your project will still require a new
 copy of the code to run `pub install` to pull in the builder library.
@@ -87,7 +149,25 @@ this one.
 Running The Build
 =================
 
-...
+The builder library is designed for use from within the Dart Editor tool, but
+it can also be run from the command-line.
+
+
+
+Run the default target:
+
+`dart -c build.dart`
+
+
+Discover the available targets:
+
+`dart build.dart --help`
+
+
+Run the clean target:
+
+`dart build.dart --clean`
+
 
 
 Helper Tools
@@ -104,6 +184,9 @@ builder/dart.dart
 
 ...
 
+
+Making Your Own Tool
+--------------------
 
 
 License
