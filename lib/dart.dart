@@ -33,6 +33,7 @@ import 'dart:convert';
 import 'resource.dart';
 import 'tool.dart';
 import 'os.dart';
+import 'src/logger.dart';
 
 final List<String> DART_PATH = <String>[
     (Platform.environment['DART_SDK'] == null
