@@ -29,6 +29,7 @@ library builder.dart;
 
 import 'dart:io';
 import 'dart:convert';
+import 'dart:isolate';
 
 import 'resource.dart';
 import 'tool.dart';
@@ -169,8 +170,18 @@ List<List<String>> _csvParser(String data, Set<String> uniqueLines) {
 
 
 
-List<LogMessage> runAsUnitTest(Resource dartFile, Project project) {
+Future runAsUnitTest(Resource dartFile, Project project,
+    [ List<String> testArgs ]) {
+  if (testArgs == null) {
+    testArgs = <String>[];
+  }
+  var response = new ReceivePort();
+  Future<Isolate> remote = Isolate.spawnUri(Uri.parse(dartFile.fullName,
+    testArgs, response.sendPort));
 
+  return remote.then((_) => response.forEach((msg) {
+      project.logger.message(msg);
+    }));
 }
 
 
