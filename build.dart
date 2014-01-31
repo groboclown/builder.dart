@@ -29,18 +29,8 @@ import 'package:builder/builder.dart';
 // The standard dart language tools
 import 'package:builder/dart.dart';
 
-// --------------------------------------------------------------------
-// Directories and file sets
-final libDir = ROOT_DIR.child("lib/");
-final mainDartSrc = new DeepListableResourceCollection.files(libDir,
-    (r) => r.name.endsWith(".dart"));
-
-final testDir = ROOT_DIR.child("test/");
-final testDartSrc = new DeepListableResourceCollection.files(testDir,
-    (r) => r.name.endsWith(".dart"));
-
-final allDartSrc = new ResourceSet.from([ mainDartSrc, testDartSrc ]);
-
+// The standard package layout definitions
+import 'package:builder/std.dart';
 
 
 // --------------------------------------------------------------------
@@ -48,7 +38,7 @@ final allDartSrc = new ResourceSet.from([ mainDartSrc, testDartSrc ]);
 
 final dartAnalyzer = new DartAnalyzer("lint",
     description: "Check the Dart files for language issues",
-    dartFiles: allDartSrc);
+    dartFiles: DART_FILES);
 
 
 void main(List<String> args) {

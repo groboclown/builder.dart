@@ -166,3 +166,11 @@ List<List<String>> _csvParser(String data, Set<String> uniqueLines) {
   }
   return ret;
 }
+
+
+
+List<LogMessage> runAsUnitTest(Resource dartFile, Project project) {
+
+}
+
+

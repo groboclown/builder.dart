@@ -33,8 +33,6 @@ import 'dart:convert';
 
 import 'src/exceptions.dart';
 
-final DirectoryResource ROOT_DIR = new DirectoryResource(Directory.current);
-
 bool CASE_SENSITIVE = true;
 
 
@@ -236,17 +234,54 @@ abstract class AbstractResourceCollection extends ResourceCollection {
 
   List<Resource> findResources();
 
+
+  void reset() {
+    _entries = null;
+  }
+
 }
+
+
+
+typedef bool ResourceTest(Resource r);
+
+final List<RegExp> DEFAULT_IGNORE_NAMES = <RegExp>[
+    new RegExp(r"^CVS[/\\]?$"),
+    new RegExp(r"^\..*$")
+];
+final List<RegExp> DEFAULT_SOURCE_IGNORE_NAMES = <RegExp>[
+    new RegExp(r"^packages[/\\]?$")
+];
+
+
+
+
+/**
+ * Ignores all the names in the [RegExp] list [DEFAULT_IGNORE_NAMES].
+ */
+final ResourceTest DEFAULT_IGNORE_TEST = (f) =>
+! DEFAULT_IGNORE_NAMES.any((m) => m.hasMatch(f.name));
+
+/**
+ * Ignores all the names in the [RegExp] list [DEFAULT_IGNORE_NAMES],
+ * as well as the [DEFAULT_SOURCE_IGNORE_NAMES] list.
+ */
+final ResourceTest SOURCE_RECURSION_TEST = (f) =>
+(! DEFAULT_SOURCE_IGNORE_NAMES.any((m) => m.hasMatch(f.name)) &&
+! DEFAULT_IGNORE_NAMES.any((m) => m.hasMatch(f.name)));
+
 
 
 
 
 class ResourceSet extends ResourceCollection {
   final List<ResourceCollection> _children = <ResourceCollection>[];
+  ResourceTest filter;
 
-  ResourceSet();
+  ResourceSet([ ResourceTest filter]) : this.filter = filter;
 
-  ResourceSet.from(List<ResourceCollection> rc) {
+  ResourceSet.from(List<ResourceCollection> rc,
+      [ ResourceTest filter]) : this.filter = filter {
     addAll(rc);
   }
 
@@ -266,23 +301,17 @@ class ResourceSet extends ResourceCollection {
   List<Resource> entries() {
     var ret = <Resource>[];
     for (ResourceCollection rc in _children) {
-      ret.addAll(rc.entries());
+      var kids = rc.entries();
+      if (filter != null) {
+        kids = kids.where(filter);
+      }
+      ret.addAll(kids);
     }
     return ret;
   }
 
 }
 
-
-typedef bool ResourceTest(Resource r);
-
-final List<RegExp> DEFAULT_IGNORE_NAMES = <RegExp>[
-    new RegExp(r"^CVS$"),
-    new RegExp(r"^\..*$")
-];
-
-final ResourceTest DEFAULT_IGNORE_TEST = (f) =>
-  ! DEFAULT_IGNORE_NAMES.any((m) => m.hasMatch(f.name));
 
 
 class ListableResourceCollection extends AbstractResourceCollection {
@@ -297,10 +326,10 @@ class ListableResourceCollection extends AbstractResourceCollection {
     //print("[ListableResourceCollection] " + res.toString() + " -> " + res.list().toString());
   }
 
-  List<Resource> findResources() {
+  Iterable<Resource> findResources() {
     var ret = res.list();
     if (resourceTest != null) {
-      ret = new List<Resource>.from(ret.where(resourceTest));
+      ret = ret.where(resourceTest);
     }
     return ret;
   }
@@ -313,15 +342,13 @@ class DeepListableResourceCollection extends ListableResourceCollection {
   
   factory DeepListableResourceCollection.files(ResourceListable res,
       ResourceTest fileTest) {
-    ResourceTest resTest = (f) =>
-        (! f.isDirectory) && fileTest(f);
     //ResourceTest resTest = (f) {
     //    print("Checking " + f.name + ": directory? " + f.isDirectory.toString() + "; fileTest? " + fileTest(f).toString());
     //    if (f.isDirectory && ! (f is DirectoryResource)) { print(" - but it's not a DirectoryResource!"); }
-    //    return (! f.isDirectory) && fileTest(f);
+    //    return fileTest(f);
     //};
     ResourceTest recurseTest = DEFAULT_IGNORE_TEST;
-    return new DeepListableResourceCollection(res, resTest, recurseTest);
+    return new DeepListableResourceCollection(res, fileTest, recurseTest);
   }
   
   
@@ -336,12 +363,12 @@ class DeepListableResourceCollection extends ListableResourceCollection {
     super(res, resourceTest);
   
 
-  List<Resource> findResources() {
+  Iterable<Resource> findResources() {
     Set<Resource> ret = new Set<Resource>();
     Set<ResourceListable> visited = new Set<ResourceListable>();
     addMore(res, ret, visited);
     //print(res.name + ": " + ret.toString());
-    return new List<Resource>.from(ret);
+    return ret;
   }
   
   void addMore(ResourceListable listable, Set<Resource> ret,
@@ -355,7 +382,7 @@ class DeepListableResourceCollection extends ListableResourceCollection {
           addMore(child, ret, visited);
         }
         //else { print("   skipped " + child.name); }
-      } else {
+      } else if (resourceTest == null || resourceTest(child)) {
         //print("    <="+child.name);
         ret.add(child);
       }
@@ -457,6 +484,9 @@ class DirectoryResource extends FileEntityResource<FileSystemEntity>
 
   @override
   List<FileEntityResource> list() {
+    if (! exists) {
+      return <FileEntityResource>[];
+    }
     return new List<FileEntityResource>.from(
         referencedDirectory.listSync(recursive: false, followLinks: true)
             .map((f) => fileSystemEntityToResource(f)));
@@ -613,5 +643,16 @@ FileEntityResource filenameToResource(String filename) {
   }
   throw new BuildSetupException("unexpected file system type: " +
     type.toString());
+}
+
+
+
+
+DirectoryResource filenameAsDir(DirectoryResource reldir, String name) {
+  var ret = filenameToResource(reldir.fullName + "/" + name + "/");
+  if (! (ret is DirectoryResource)) {
+    throw new BuildSetupException(name + " is not a directory");
+  }
+  return ret;
 }
 
