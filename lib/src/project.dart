@@ -41,7 +41,7 @@ class Project {
 
   Project.parse(BuildArgs args) :
       _baseLogger = args.logger,
-      _targets = args.allTargets,
+      _targets = new List<TargetMethod>.from(args.allTargets, growable: false),
       changed = filenamesAsCollection(args.changed),
       removed = filenamesAsCollection(args.removed);
 
@@ -60,9 +60,9 @@ class Project {
   }
 
 
-  List<TargetMethod> get targets => new List<TargetMethod>.from(_targets);
+  Iterable<TargetMethod> get targets => _targets;
 
-  List<String> get targetNames => new List<String>.from(_targets.map((t) => t.name));
+  Iterable<String> get targetNames => _targets.map((t) => t.name);
 
   String getProperty(String key) {
     return _properties[key];
@@ -149,7 +149,8 @@ class Project {
    * and it also has a weak sorting - it must run after all the weakly
    * dependent targets, but they are not required to run.
    */
-  List<TargetMethod> _dependencyList(List<TargetMethod> roots, bool complete) {
+  Iterable<TargetMethod> _dependencyList(Iterable<TargetMethod> roots,
+      bool complete) {
     Map<String, _TargetOrder> orders = <String, _TargetOrder>{};
     List<_TargetOrder> orderedRoots = <_TargetOrder>[];
     for (TargetMethod tm in _targets) {
@@ -191,7 +192,7 @@ class Project {
         }
       }
     }
-    return new List<TargetMethod>.from(tmRet);
+    return tmRet;
   }
 
 

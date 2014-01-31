@@ -25,11 +25,14 @@ library builder;
 
 import 'src/argparser.dart';
 import 'src/project.dart';
-import 'tool.dart';
+
+import 'src/decl.dart' as decl;
+export 'src/decl.dart' show VirtualTarget;
+
+import 'tool.dart' as tool;
 export 'tool.dart' show
     Pipe, BuildTool, addPhase, getTargets,
     PHASE_CLEAN, PHASE_BUILD, PHASE_ASSEMBLE, PHASE_DEPLOY;
-//import 'resource.dart';
 export 'resource.dart';
 
 
@@ -54,9 +57,17 @@ export 'resource.dart';
 
 void build(List<String> args, { libraryName: "build" }) {
   var buildArgs = new BuildArgs.fromCmd(args,
-    getTargets(libraryName: libraryName));
+    tool.getTargets(libraryName: libraryName));
   var project = new Project.parse(buildArgs);
-  project.buildTargets(buildArgs.calledTargets);
+  var changedTargets = decl.computeChanges(project);
+  if (buildArgs.calledTargets.isEmpty && changedTargets.isEmpty) {
+    // TODO see if this should be the "default" target instead.
+    project.buildTargets( <tool.TargetMethod>[ tool.TARGET_NOOP ] );
+  } else if (buildArgs.calledTargets.isEmpty) {
+    project.buildTargets(changedTargets);
+  } else {
+    project.buildTargets(buildArgs.calledTargets);
+  }
 }
 
 

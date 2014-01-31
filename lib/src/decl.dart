@@ -72,6 +72,35 @@ abstract class Pipe {
   Map<Resource, List<Resource>> get directPipe;
 
 
+  /**
+   * Match the given input to the corresponding output [Resource]s.  It first
+   * uses the [#directPipe] before defaulting to the [#output].  If there
+   * were no matches, it returns an empty list.
+   */
+  List<Resource> matchOutput(Resource input) {
+    for (var r in directPipe) {
+      if (input.matches(r)) {
+        return directPipe[r];
+      }
+    }
+
+    for (var r in requiredInput) {
+      if (input.matches(r)) {
+        return output;
+      }
+    }
+    for (var r in optionalInput) {
+      if (input.matches(r)) {
+        return output;
+      }
+    }
+
+    return <Resource>[];
+  }
+
+
+
+
   factory Pipe.direct(Map<Resource, List<Resource>> direct) {
     return new SimplePipe.direct(direct);
   }
@@ -87,9 +116,9 @@ abstract class Pipe {
   }
 
 
-  factory Pipe.all({ List<Resource> requiredInput: null,
-      List<Resource> optionalInput: null,
-      List<Resource> output: null,
+  factory Pipe.all({ Iterable<Resource> requiredInput: null,
+      Iterable<Resource> optionalInput: null,
+      Iterable<Resource> output: null,
       Map<Resource, List<Resource>> directPipe: null }) {
     if (requiredInput == null) {
       requiredInput = <Resource>[];
@@ -103,25 +132,27 @@ abstract class Pipe {
     return new SimplePipe.all(requiredInput: requiredInput,
       optionalInput: optionalInput, output: output, directPipe: directPipe);
   }
+
+
+  Pipe() {}
 }
 
 
-class SimplePipe implements Pipe {
-  final List<Resource> _requiredInput = <Resource>[];
-  final List<Resource> _optionalInput = <Resource>[];
-  final List<Resource> _output = <Resource>[];
-  final Map<Resource, List<Resource>> _directPipe = <Resource, List<Resource>>{};
+class SimplePipe extends Pipe {
+  final Set<Resource> _requiredInput = new Set<Resource>();
+  final Set<Resource> _optionalInput = new Set<Resource>();
+  final Set<Resource> _output = new Set<Resource>();
+  final Map<Resource, Iterable<Resource>> _directPipe =
+    <Resource, Iterable<Resource>>{};
 
-  SimplePipe.direct(Map<Resource, List<Resource>> direct) {
+  SimplePipe.direct(Map<Resource, Iterable<Resource>> direct) {
     // Ensure we don't have duplicates in the wrong places
-    Set<Resource> allOut = new Set<Resource>();
     for (var r in direct.keys) {
       _requiredInput.add(r);
       Set<Resource> out = new Set<Resource>.from(direct[r]);
-      _directPipe[r] = new List<Resource>.from(out);
-      allOut.addAll(out);
+      _directPipe[r] = out;
+      _output.addAll(out);
     }
-    _output.addAll(allOut);
   }
 
 
@@ -133,25 +164,25 @@ class SimplePipe implements Pipe {
       _output.add(output);
     }
     if (input != null && output != null) {
-      _directPipe[input] = <Resource>[ output ];
+      _directPipe[input] = [ output ];
     }
   }
 
 
-  SimplePipe.list(List<Resource> inputs, List<Resource> outputs) {
+  SimplePipe.list(Iterable<Resource> inputs, Iterable<Resource> outputs) {
     if (inputs != null) {
-      _requiredInput.addAll(new Set<Resource>.from(inputs));
+      _requiredInput.addAll(inputs);
     }
     if (outputs != null) {
-      _output.addAll(new Set<Resource>.from(outputs));
+      _output.addAll(outputs);
     }
   }
 
 
-  SimplePipe.all({ List<Resource> requiredInput: null,
-      List<Resource> optionalInput: null,
-      List<Resource> output: null,
-      Map<Resource, List<Resource>> directPipe: null }) {
+  SimplePipe.all({ Iterable<Resource> requiredInput: null,
+      Iterable<Resource> optionalInput: null,
+      Iterable<Resource> output: null,
+      Map<Resource, Iterable<Resource>> directPipe: null }) {
     if (requiredInput != null) {
       _requiredInput.addAll(new Set<Resource>.from(requiredInput));
     }
@@ -169,8 +200,7 @@ class SimplePipe implements Pipe {
         if (! _requiredInput.contains(r) && ! _optionalInput.contains(r)) {
           _optionalInput.add(r);
         }
-        _directPipe[r] = new List<Resource>.from(
-            new Set<Resource>.from(directPipe[r]));
+        _directPipe[r] = new Set<Resource>.from(directPipe[r]);
         out.addAll(_directPipe[r]);
       }
     }
@@ -178,10 +208,17 @@ class SimplePipe implements Pipe {
   }
 
 
-  List<Resource> get requiredInput => _requiredInput;
-  List<Resource> get optionalInput => _optionalInput;
-  List<Resource> get output => _output;
-  Map<Resource, List<Resource>> get directPipe => _directPipe;
+  @override
+  Iterable<Resource> get requiredInput => _requiredInput;
+
+  @override
+  Iterable<Resource> get optionalInput => _optionalInput;
+
+  @override
+  Iterable<Resource> get output => _output;
+
+  @override
+  Map<Resource, Iterable<Resource>> get directPipe => _directPipe;
 }
 
 
@@ -209,14 +246,33 @@ abstract class BuildTool extends TargetMethod {
   }
 
 
+
+  /**
+   * Fetch the list of files that have changed, which this tool uses as
+   * inputs (either optional or required).  The setup method
+   * ([computeChanges()]) must have been called first.
+   */
+  Iterable<Resource> getChangedInputs() {
+    var ret = new Set<Resource>();
+    for (var r in pipe.requiredInput) {
+      ret.addAll(_CHANGED_RESOURCES.where((cr) => r.matches(cr)));
+    }
+    for (var r in pipe.optionalInput) {
+      ret.addAll(_CHANGED_RESOURCES.where((cr) => r.matches(cr)));
+    }
+    return ret;
+  }
+
+
+
   /**
    * Constructs a [target] from the standard ([String]) definitions, for use
    * in passing to the [BuildTool] constructor.  It does not wire anything up
    * to the [BuildTool] instance.
    */
   static target mkTargetDef(String name, String description,
-      String phase, Pipe pipe, List<String> dependencies,
-      List<String> weakDependencies) {
+      String phase, Pipe pipe, Iterable<String> dependencies,
+      Iterable<String> weakDependencies) {
     if (! _PHASES.containsKey(phase)) {
       throw new NoSuchPhaseException(phase);
     }
@@ -289,9 +345,12 @@ class TopPhaseTarget extends TargetMethod {
   void call(Project project) {}
 }
 
+
+
+
 class VirtualTarget extends TargetMethod {
   factory VirtualTarget(String name, String description,
-      List<String> dependencies, List<String> weakDependencies,
+      Iterable<String> dependencies, Iterable<String> weakDependencies,
       [ bool isTop = false ]) {
     if (dependencies == null) {
       dependencies = <String>[];
@@ -315,6 +374,23 @@ class VirtualTarget extends TargetMethod {
 
   @override
   void call(Project project) {}
+}
+
+
+
+class NoOpTarget extends VirtualTarget {
+  factory NoOpTarget(String name, String description) {
+    var targetDef = new target.internal(description, <String>[], <String>[],
+      false);
+  }
+
+  NoOpTarget._(String name, target targetDef) :
+    super._(name, targetDef);
+
+  @override
+  void call(Project project) {
+    project.logger.info("nothing to do");
+  }
 }
 
 
@@ -431,10 +507,17 @@ void _connectPipes(BuildTool tool) {
     }
     links.add(tool);
 
-    _PIPED_OUTPUT.forEach((depr, deptool) {
-      // FIXME link
-      //if ()
-    });
+    // This is fairly ineficcient.  A better data structure could tune down
+    // the amount of loops in loops.
+
+    _PIPED_OUTPUT.forEach((depr, deptools) => deptools.forEach((deptool) {
+      // name check first, to omit the possibly long operation on
+      // matches.
+      if (! deptool.targetDef.strongDepends.contains(tool.name) &&
+          depr.matches(r)) {
+        deptool.targetDef.strongDepends.add(tool.name);
+      }
+    }));
   }
 
   for (var r in tool.pipe.output) {
@@ -445,15 +528,49 @@ void _connectPipes(BuildTool tool) {
     }
     links.add(tool);
 
-    // FIXME link
+    _PIPED_INPUT.forEach((depr, deptools) => deptools.forEach((deptool) {
+      // name check first, to omit the possibly long operation on
+      // matches.
+      if (! tool.targetDef.strongDepends.contains(deptool.name) &&
+          r.matches(depr)) {
+        tool.targetDef.strongDepends.add(deptool.name);
+      }
+    }));
   }
 }
 
 
-List<BuildTool> forwardChain(List<Resource> changedResources) {
-// FIXME construct the ordered build tools that should run if the given
-// resources have changed since the last build.  This is a forward
-// chain of targets based on the pipe connections that still must maintain
-// the dependency graph ordering.
-}
+final Set<Resource> _CHANGED_RESOURCES = new Set<Resource>();
 
+
+/**
+ * Computes the [Resource] changes based on the [Project] listed changed
+ * files, chained up through the targets.  Returns a [List] of [TargetMethod]
+ * instances that are affected by those changes.
+ */
+List<TargetMethod> computeChanges(Project project) {
+  var ret = new Set<TargetMethod>();
+  _CHANGED_RESOURCES.clear();
+  var validateStack = <Resource>[];
+  _CHANGED_RESOURCES.addAll(project.changed.entries());
+  _CHANGED_RESOURCES.addAll(project.removed.entries());
+  validateStack.addAll(_CHANGED_RESOURCES);
+
+  while (! validateStack.isEmpty) {
+    var next = validateStack.removeLast();
+    if (! _CHANGED_RESOURCES.contains(next)) {
+      _CHANGED_RESOURCES.add(next);
+      _PIPED_INPUT.forEach((depres, deptools) {
+        if (next.matches(depres)) {
+          validateStack.add(depres);
+          deptools.forEach((deptool) {
+            ret.add(deptool);
+            validateStack.addAll(deptool.pipe.matchOutput(next));
+          });
+        }
+      });
+    }
+  }
+
+  return new List<TargetMethod>.from(ret);
+}

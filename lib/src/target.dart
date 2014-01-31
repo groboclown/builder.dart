@@ -52,28 +52,37 @@ class target {
    * Defines the ordering relationship.  Implicitly includes all the strong
    * dependencies.
    */
-  final List<String> weakDepends;
+  final Set<String> weakDepends;
 
   /**
    * Defines which targets will be built if this one is built.
    */
-  final List<String> strongDepends;
+  final Set<String> strongDepends;
 
   factory target(String description,
-      { List<String> depends: null, List<String> weak: null }) {
-    return new target.internal(description, depends, weak, false);
+      { Iterable<String> depends: null, Iterable<String> weak: null }) {
+    return new target._(description,
+      _asStringSet(depends), _asStringSet(weak), false);
   }
 
   factory target.main(String description,
-      { List<String> depends: null, List<String> weak: null }) {
-    return new target.internal(description, depends, weak, true);
+      { Iterable<String> depends: null, Iterable<String> weak: null }) {
+    return new target._(description,
+      _asStringSet(depends), _asStringSet(weak), true);
   }
 
 
   /**
    * A "friend" constructor, used by tool.dart.
    */
-  const target.internal(this.description, this.strongDepends, this.weakDepends,
+  factory target.internal(String description,
+      Iterable<String> depends, Iterable<String> weak, bool isDefault) {
+    return new target._(description,
+    _asStringSet(depends), _asStringSet(weak), isDefault);
+  }
+
+
+  const target._(this.description, this.strongDepends, this.weakDepends,
       this.isDefault);
 }
 
@@ -171,4 +180,17 @@ List<TargetMethod> parseTargets(Type builder) {
   //}
 
   return ret;
+}
+
+
+Set<String> _asStringSet(Iterable<String> x) {
+  Set<String> s;
+  if (x == null) {
+    s = new Set<String>();
+  } else if (x is Set<String>) {
+    s = x;
+  } else {
+    s = new Set<String>.from(x);
+  }
+  return s;
 }

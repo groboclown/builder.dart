@@ -352,7 +352,7 @@ class DeepListableResourceCollection extends ListableResourceCollection {
       if (child is ResourceListable) {
         if (! visited.contains(child) &&
             (recurseTest == null || recurseTest(child))) {
-          addMore(child as ResourceListable, ret, visited);
+          addMore(child, ret, visited);
         }
         //else { print("   skipped " + child.name); }
       } else {
@@ -465,6 +465,14 @@ class DirectoryResource extends FileEntityResource<FileSystemEntity>
   @override
   FileEntityResource child(String name) {
     return filenameToResource(fullName + '/' + name);
+  }
+
+  @override
+  bool contains(Resource r) {
+    if (r == this) {
+      return true;
+    }
+    return list().any((kid) => kid.contains(r));
   }
 
 }

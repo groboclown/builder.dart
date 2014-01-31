@@ -41,12 +41,13 @@ class BuildArgs {
   /**
    * All the targets supported by the build file.
    */
-  final List<TargetMethod> allTargets;
+  final Iterable<TargetMethod> allTargets;
 
   /**
    * All the targets explicitly or implicitly invoked from the command line.
    */
-  final List<TargetMethod> calledTargets;
+  final Iterable<TargetMethod> calledTargets;
+  final Iterable<TargetMethod> defaultTargets;
 
   final List<String> changed;
   final List<String> removed;
@@ -56,8 +57,8 @@ class BuildArgs {
   /**
    * Performs an exit call if the args are not valid.
    */
-  factory BuildArgs.fromCmd(List<String> args,
-      List<TargetMethod> supportedTargets,
+  factory BuildArgs.fromCmd(Iterable<String> args,
+      Iterable<TargetMethod> supportedTargets,
       { void usageCallback(ArgParser parser) } ) {
     var res = _parseArgs(args, supportedTargets, usageCallback);
     var targets = <TargetMethod>[];
@@ -67,9 +68,8 @@ class BuildArgs {
       }
     }
 
-    if (targets.isEmpty) {
-      targets.addAll(supportedTargets.where((t) => t.targetDef.isDefault));
-    }
+    var defaultTargets = supportedTargets.where(
+        (t) => t.targetDef.isDefault);
 
     var logger;
     if (res['machine']) {
@@ -78,20 +78,33 @@ class BuildArgs {
       logger = new CmdLogger();
     }
 
-    return new BuildArgs(logger, supportedTargets, targets, res['changed'],
-      res['removed']);
+    var changed = res['changed'];
+    if (changed == null) {
+      changed = <String>[];
+    }
+    var removed = res['removed'];
+    if (removed == null) {
+      removed = <String>[];
+    }
+
+    return new BuildArgs(logger, supportedTargets, targets, changed,
+      removed, defaultTargets);
   }
 
   BuildArgs(this.logger, this.allTargets, this.calledTargets,
-      this.changed, this.removed);
+      this.changed, this.removed, this.defaultTargets);
 
+
+  Iterable<TargetMethod> get targetsToRun =>
+    calledTargets.isEmpty ? defaultTargets : calledTargets;
 }
 
 
 /**
  * Performs an exit call if the args are not valid.
  */
-ArgResults _parseArgs(List<String> args, List<TargetMethod> supportedTargets,
+ArgResults _parseArgs(Iterable<String> args,
+    Iterable<TargetMethod> supportedTargets,
     void usageCallback(ArgParser parser)) {
   if (args == null) {
     args = [];

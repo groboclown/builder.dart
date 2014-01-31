@@ -41,8 +41,7 @@ final String DART_ANALYZER_NAME = "dartanalyzer";
 
 
 /**
- * The `packageRoot` is the root directory of the project being built.  It
- * should contain a `packages` directory.
+ * The [packageRoot] is the package directory.
  */
 List<LogMessage> dartAnalyzer(
     Resource dartFile, Project project,
@@ -54,7 +53,8 @@ List<LogMessage> dartAnalyzer(
   }
   Resource exec = resolveExecutable(cmd, DART_PATH);
   if (exec == null) {
-    throw new BuildExecutionException(project.target, "could not find " + cmd);
+    throw new BuildExecutionException(project.activeTarget,
+      "could not find " + cmd);
   }
   
   var args = <String>['--machine', '--show-package-warnings'];
@@ -90,14 +90,14 @@ List<LogMessage> dartAnalyzer(
 
 
 class DartAnalyzer extends BuildTool {
-  final File cmd;
+  final String cmd;
   final DirectoryResource packageRoot;
 
   factory DartAnalyzer(String name,
       { String description: "", String phase: PHASE_BUILD,
         ResourceCollection dartFiles: null, List<String> depends: null,
         DirectoryResource packageRoot: null,
-        File cmd: null }) {
+        String cmd: null }) {
     if (depends == null) {
       depends = <String>[];
     }
@@ -110,7 +110,7 @@ class DartAnalyzer extends BuildTool {
 
 
   DartAnalyzer._(String name, target targetDef, String phase, Pipe pipe,
-    File cmd, DirectoryResource packageRoot) :
+    String cmd, DirectoryResource packageRoot) :
     this.cmd = cmd, this.packageRoot = packageRoot,
     super(name, targetDef, phase, pipe);
 
@@ -121,7 +121,7 @@ class DartAnalyzer extends BuildTool {
     inp.addAll(pipe.optionalInput);
     var uniqueLines = new Set<String>();
     for (Resource r in inp) {
-      if (r.exists && ! r.isDirectory) {
+      if (r.exists && ! (r is ResourceListable)) {
         project.logger.info("Processing " + r.name);
         dartAnalyzer(r, project, packageRoot: packageRoot, cmd: cmd,
             uniqueLines: uniqueLines)
