@@ -23,37 +23,40 @@
 
 library builder.dart;
 
+/**
+ * Methods to invoke the commands distributed with the dart sdk.
+ */
+
 import 'dart:io';
 import 'dart:convert';
 
 import 'resource.dart';
 import 'tool.dart';
+import 'os.dart';
 
-/**
- * Methods to invoke the commands distributed with the dart sdk.
- */
-
-// FIXME if windows, add a ".exe", otherwise leave as-is
-final String EXEC_EXT = (Platform.isWindows ? ".exe" : "");
-final String SHELL_EXT = (Platform.isWindows ? ".bat" : "");
-final Directory DART_SDK = new Directory(Platform.environment['DART_SDK']);
-final Directory DART_BIN = new Directory(DART_SDK.path + "/bin");
-final File DART_ANALYZER_EXEC = new File(DART_BIN.path + "/dartanalyzer" + SHELL_EXT).absolute;
+final List<String> DART_PATH = <String>[
+    Platform.environment['DART_SDK'] + "/bin",
+    Platform.environment['DART_HOME'] + "/bin" ];
+final String DART_ANALYZER_NAME = "dartanalyzer";
 
 
 /**
  * The `packageRoot` is the root directory of the project being built.  It
  * should contain a `packages` directory.
  */
-List<LogMessage> dartAnalyzer(DirectoryResource packageRoot,
+List<LogMessage> dartAnalyzer(
     Resource dartFile, Project project,
-    { File cmd: null, Set<String> uniqueLines: null }) {
-
-  //print("sdk: [" + DART_SDK.path + "]");
+    { DirectoryResource packageRoot: null, String cmd: null,
+    Set<String> uniqueLines: null }) {
 
   if (cmd == null) {
-    cmd = DART_ANALYZER_EXEC;
+    cmd = DART_ANALYZER_NAME;
   }
+  Resource exec = resolveExecutable(cmd, DART_PATH);
+  if (exec == null) {
+    throw new BuildExecutionException(project.target, "could not find " + cmd);
+  }
+  
   var args = <String>['--machine', '--show-package-warnings'];
   if (packageRoot != null) {
     args.add('--package-root');
@@ -61,9 +64,9 @@ List<LogMessage> dartAnalyzer(DirectoryResource packageRoot,
   }
   args.add(dartFile.fullName);
 
-  project.logger.debug("Running [" + cmd.path + "] with arguments " +
+  project.logger.debug("Running [" + exec.fullName + "] with arguments " +
     args.toString());
-  ProcessResult result = Process.runSync(cmd.path, args);
+  ProcessResult result = Process.runSync(exec.fullName, args);
 
   var ret = <LogMessage>[];
   for (List<String> line in _csvParser(
@@ -120,7 +123,8 @@ class DartAnalyzer extends BuildTool {
     for (Resource r in inp) {
       if (r.exists && ! r.isDirectory) {
         project.logger.info("Processing " + r.name);
-        dartAnalyzer(packageRoot, r, project, cmd: cmd, uniqueLines: uniqueLines)
+        dartAnalyzer(r, project, packageRoot: packageRoot, cmd: cmd,
+            uniqueLines: uniqueLines)
           .forEach((m) => project.logger.message(m));
       } else {
         project.logger.debug("Skipping " + r.name);
