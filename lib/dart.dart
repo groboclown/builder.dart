@@ -33,10 +33,15 @@ import 'dart:convert';
 import 'resource.dart';
 import 'tool.dart';
 import 'os.dart';
+import 'src/logger.dart';
 
 final List<String> DART_PATH = <String>[
-    Platform.environment['DART_SDK'] + "/bin",
-    Platform.environment['DART_HOME'] + "/bin" ];
+    (Platform.environment['DART_SDK'] == null
+        ? null
+        : Platform.environment['DART_SDK'] + "/bin"),
+    (Platform.environment['DART_HOME'] == null
+        ? null
+        : Platform.environment['DART_HOME'] + "/bin" )];
 final String DART_ANALYZER_NAME = "dartanalyzer";
 
 
@@ -71,19 +76,24 @@ List<LogMessage> dartAnalyzer(
   var ret = <LogMessage>[];
   for (List<String> line in _csvParser(
       result.stdout + "\n" + result.stderr, uniqueLines)) {
-    // Don't know what column 6 is for.  It's an int.  Might be the message id.
-    var msg = new LogMessage.resource(
-      level: line[0].toLowerCase(),
-      tool: "dartanalyzer",
-      category: line[1],
-      id: line[2],
-      file: new FileResource(new File(line[3])),
-      line: int.parse(line[4]),
-      charStart: int.parse(line[5]),
-      charEnd: int.parse(line[5]) + int.parse(line[6]),
-      message: line[7]
-    );
-    ret.add(msg);
+    if (line.length >= 8) {
+      // Don't know what column 6 is for.  It's an int.  Might be the message id.
+      var msg = new LogMessage.resource(
+        level: line[0].toLowerCase(),
+        tool: "dartanalyzer",
+        category: line[1],
+        id: line[2],
+        file: new FileResource(new File(line[3])),
+        line: int.parse(line[4]),
+        charStart: int.parse(line[5]),
+        charEnd: int.parse(line[5]) + int.parse(line[6]),
+        message: line[7]
+      );
+      ret.add(msg);
+    } else {
+      ret.add(new LogMessage.tool(level: ERROR, tool: "dartanalyzer",
+        message: line.toString()));
+    }
   }
   return ret;
 }

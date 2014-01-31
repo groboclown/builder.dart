@@ -575,6 +575,9 @@ FileEntityResource fileSystemEntityToResource(FileSystemEntity f) {
  * it will be inspected to see if it points to a directory or file.
  */
 FileEntityResource filenameToResource(String filename) {
+  if (filename == null) {
+    return null;
+  }
   var stripped = filename.trim();
   if (stripped.length <= 0) {
     return null;

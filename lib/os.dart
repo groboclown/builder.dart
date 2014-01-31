@@ -54,7 +54,7 @@ Resource resolveExecutable(String name, [ List<String> additionalPath ]) {
   if (additionalPath != null) {
     for (var p in additionalPath) {
       var r = filenameToResource(p);
-      if (r.exists && r.isDirectory) {
+      if (r != null && r.exists && r.isDirectory) {
         path.add(r);
       }
     }
