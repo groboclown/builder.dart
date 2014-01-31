@@ -418,8 +418,35 @@ final Map<Resource, List<BuildTool>> _PIPED_INPUT =
 
 
 void _connectPipes(BuildTool tool) {
-// FIXME connect this new tool to the list of existing output targets.
-// Take special care with outputs that are shared by tools.
+  // optionalInput is not connected int the piped input.
+
+  // The "Reource" cannot use the "match" in the global piped* structures,
+  // because they may not be correctly equal.
+
+  for (var r in tool.pipe.requiredInput) {
+    var links = _PIPED_INPUT[r];
+    if (links == null) {
+      links = <BuildTool>[];
+      _PIPED_INPUT[r] = links;
+    }
+    links.add(tool);
+
+    _PIPED_OUTPUT.forEach((depr, deptool) {
+      // FIXME link
+      //if ()
+    });
+  }
+
+  for (var r in tool.pipe.output) {
+    var links = _PIPED_OUTPUT[r];
+    if (links == null) {
+      links = <BuildTool>[];
+      _PIPED_OUTPUT[r] = links;
+    }
+    links.add(tool);
+
+    // FIXME link
+  }
 }
 
 

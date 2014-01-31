@@ -42,49 +42,124 @@ bool CASE_SENSITIVE = true;
  * Generic definition of a read/write resource.
  */
 abstract class Resource<T extends ResourceListable> {
-
+  /**
+   * The simple name of the resource.  For file objects, this represents the
+   * file name without the parent directory.  For URI objects, this is the
+   * file name without the path or scheme information.
+   */
   String get name;
 
+  /**
+   * The full name of the resource, including parent information.
+   */
   String get fullName;
 
+  /**
+   * Returns `true` if the [#readAsBytes()] and [#readAsString()] calls are
+   * supported by this [Resource].
+   */
   bool get readable;
 
+  /**
+   * Returns `true` if the [#writeAsBytes()] and [#writeAsString()] calls are
+   * supported by this [Resource].
+   */
   bool get writable;
 
+  /**
+   * Returns `true` if this [Resource] actually exists.
+   */
   bool get exists;
 
-  bool get isLink;
-
-  bool get isDirectory;
-
+  /**
+   * The parent [Resource] of this one.  If this [Resource] already represents
+   * the top-level, then it returns `this`.
+   */
   T get parent;
 
-  // default implementation
+  /**
+   * Attempt to delete this [Resource].  Set [recursive] to `true` to attempt
+   * to delete this resource and its children.
+   *
+   * Returns `true` if this [Resource] could not be removed.  In the case of
+   * [recursive] `true`, a `false` return result may indicate a partial failure,
+   * where potentially some or all of the children may have been deleted, but
+   * this instance still remains.
+   */
+  // default implementation returns false.
   bool delete(bool recursive) {
-    throw new Exception("delete not supported on " + name);
+    return false;
   }
 
-  // default implementation
+  /**
+   * Read the contents of this [Resource] as binary bytes.  If
+   * [#readable] is `false`, then this will throw an [Exception].
+   */
+  // default implementation throws an exception.
   List<int> readAsBytes() {
     throw new Exception("readAsBytes not supported on " + name);
   }
 
-  // default implementation
+  /**
+   * Read the contents of this [Resource] as character data, using `encoding`
+   * to encode the binary data as characters (defaults to the system encoding).
+   * If [#readable] is `false`, then this will throw an [Exception].
+   */
+  // default implementation throws an exception.
   String readAsString({ Encoding encoding: null }) {
     throw new Exception("readAsString not supported on " + name);
   }
 
+
+  /**
+   * Write the binary byte `data` to this [Resource].  If
+   * [#writable] is `false`, then this will throw an [Exception].
+   */
   // default implementation
   void writeBytes(List<int> data) {
     throw new Exception("writeAsBytes not supported on " + name);
   }
 
+  /**
+   * Write the character `data` to this [Resource], using `encoding`
+   * to encode the characters as binary data (defaults to the system encoding).
+   * If [#writable] is `false`, then this will throw an [Exception].
+   */
   // default implementation
   void writeString(String data, { Encoding encoding: null }) {
     throw new Exception("writeAsString not supported on " + name);
   }
 
 
+  /**
+   * Returns `true` if this resource contain the other resource, or if it is
+   * the same object.  If the instance represents a [ResourceListable]
+   * object, then it should check against all the actual [Resource] instances
+   * it lists.  If the instance represents a container [Resource], but one
+   * that *only* represents the container, and not sub-elements, then it
+   * should only match on equality.
+   *
+   * Default implementation returns the [operator ==] value.
+   */
+  bool contains(Resource other) {
+    return this == other;
+  }
+
+
+  /**
+   * Returns `true` if either this [Resource] [#contains(Resource)] the
+   * other [Resource], or if the other [Resource] [#contains(Resource)] this
+   * one.
+   */
+  bool matches(Resource other) {
+    return (this.contains(other) || other.contains(this));
+  }
+
+
+  /**
+   * Checks if this [Resource] represents the exact same [Resource] as `t`.
+   */
+  @override
   bool operator ==(Resource t) {
     if (t == null) {
       return false;
@@ -99,14 +174,34 @@ abstract class Resource<T extends ResourceListable> {
 }
 
 
-// Interface
-abstract class ResourceListable<T extends Resource> {
+/**
+ * Interface (Really, a mixin, but the mixin syntax in Dart does not currently
+ * support generics).
+ *
+ * A kind of [Resource] that contains other resources.
+ */
+abstract class ResourceListable<T extends Resource> extends Resource {
   List<T> list();
-  
+
+  /**
+   * Return the child from inside this [Resource].  It does not have to be
+   * returned by [#list()], in the case that something requests a new
+   * resource.
+   *
+   * The [name] is relative to this [Resource].
+   *
+   * If the [name] cannot be represented as a child [Resource], then this
+   * method returns `null`.
+   */
   T child(String name);
 }
 
 
+/**
+ * A collection of [Resource] instances, but not necessarily itself a
+ * [Resource].  The entries may be dynamically loaded, and may change
+ * from call to call.
+ */
 abstract class ResourceCollection {
   List<Resource> entries();
 }
