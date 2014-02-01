@@ -29,6 +29,7 @@ library builder.src.decl;
 
 import 'dart:io';
 import 'dart:mirrors';
+import 'dart:async';
 
 import '../resource.dart';
 import 'target.dart';
@@ -325,7 +326,10 @@ class PhaseTarget extends TargetMethod {
   }
   
   @override
-  void call(Project project) {}
+  Future<Project> start(Project project) {
+    // do nothing
+    return new Future<Project>(() => project);
+  }
 }
 
 class TopPhaseTarget extends TargetMethod {
@@ -342,7 +346,10 @@ class TopPhaseTarget extends TargetMethod {
     super(name, targetDef);
 
   @override
-  void call(Project project) {}
+  Future<Project> start(Project project) {
+    // do nothing
+    return new Future<Project>(() => project);
+  }
 }
 
 
@@ -373,7 +380,10 @@ class VirtualTarget extends TargetMethod {
     super(name, targetDef);
 
   @override
-  void call(Project project) {}
+  Future<Project> start(Project project) {
+    // do nothing
+    return new Future<Project>(() => project);
+  }
 }
 
 
@@ -388,8 +398,12 @@ class NoOpTarget extends VirtualTarget {
     super._(name, targetDef);
 
   @override
-  void call(Project project) {
-    project.logger.info("nothing to do");
+  Future<Project> start(Project project) {
+    // do nothing
+    return new Future<Project>(() {
+      project.logger.info("nothing to do");
+      return project;
+    });
   }
 }
 

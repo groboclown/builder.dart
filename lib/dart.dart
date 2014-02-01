@@ -30,6 +30,7 @@ library builder.dart;
 import 'dart:io';
 import 'dart:convert';
 import 'dart:isolate';
+import 'dart:async';
 
 import 'resource.dart';
 import 'tool.dart';
@@ -47,13 +48,15 @@ final String DART_ANALYZER_NAME = "dartanalyzer";
 
 
 /**
- * The [packageRoot] is the package directory.
+ * Spawns the dartAnalyzer immediately.
+ *
+ * The [packageRoot] is the package directory.  The returned [Future]
+ * executes when the process completes.
  */
-List<LogMessage> dartAnalyzer(
+Future<Resource> dartAnalyzer(
     Resource dartFile, Project project,
     { DirectoryResource packageRoot: null, String cmd: null,
     Set<String> uniqueLines: null }) {
-
   if (cmd == null) {
     cmd = DART_ANALYZER_NAME;
   }
@@ -72,31 +75,32 @@ List<LogMessage> dartAnalyzer(
 
   project.logger.debug("Running [" + exec.fullName + "] with arguments " +
     args.toString());
-  ProcessResult result = Process.runSync(exec.fullName, args);
-
-  var ret = <LogMessage>[];
-  for (List<String> line in _csvParser(
-      result.stdout + "\n" + result.stderr, uniqueLines)) {
-    if (line.length >= 8) {
-      // Don't know what column 6 is for.  It's an int.  Might be the message id.
-      var msg = new LogMessage.resource(
-        level: line[0].toLowerCase(),
-        tool: "dartanalyzer",
-        category: line[1],
-        id: line[2],
-        file: new FileResource(new File(line[3])),
-        line: int.parse(line[4]),
-        charStart: int.parse(line[5]),
-        charEnd: int.parse(line[5]) + int.parse(line[6]),
-        message: line[7]
-      );
-      ret.add(msg);
-    } else {
-      ret.add(new LogMessage.tool(level: ERROR, tool: "dartanalyzer",
-        message: line.toString()));
-    }
-  }
-  return ret;
+  return processStartSync(exec.fullName, args, (process) {
+    // add stdout and stderr into a single stream
+    process.stderr.transform(createCsvTransformer(uniqueLines))
+      .listen((List<String> row) {
+        if (row.length >= 8) {
+          var msg = new LogMessage.resource(
+              level: row[0].toLowerCase(),
+              tool: "dartanalyzer",
+              category: row[1],
+              id: row[2],
+              file: new FileResource(new File(row[3])),
+              line: int.parse(row[4]),
+              charStart: int.parse(row[5]),
+              charEnd: int.parse(row[5]) + int.parse(row[6]),
+              message: row[7]
+          );
+          project.logger.message(msg);
+        }
+      });
+    process.stdout.transform(new LineSplitter()).listen((String data) {
+      project.logger.fileInfo(tool: "dartanalyzer",
+          file: dartFile, message: data);
+    });
+  }).then((code) {
+    project.logger.info("Completed processing " + dartFile.name);
+  }).then((_) => dartFile);
 }
 
 
@@ -127,46 +131,122 @@ class DartAnalyzer extends BuildTool {
 
 
   @override
-  void call(Project project) {
+  Future<Project> start(Project project) {
     var inp = new List<Resource>.from(pipe.requiredInput);
     inp.addAll(pipe.optionalInput);
+
+    if (inp.isEmpty) {
+      project.logger.info("nothing to do");
+      return new Future<Project>.sync(() => project);
+    }
+
     var uniqueLines = new Set<String>();
-    for (Resource r in inp) {
-      if (r.exists && ! (r is ResourceListable)) {
-        project.logger.info("Processing " + r.name);
-        dartAnalyzer(r, project, packageRoot: packageRoot, cmd: cmd,
-            uniqueLines: uniqueLines)
-          .forEach((m) => project.logger.message(m));
-      } else {
-        project.logger.debug("Skipping " + r.name);
-      }
-    }
+
+    // Chain the calls, rather than running in parallel.
+    // For running in parallel, we create all the Futures in the
+    // calls to dartAnalyzer, then return a Future.wait() on all of them.
+    var runList = new Sequential<Resource>(
+      inp.map((r) {
+        Future<Resource> ret() {
+          if (r.exists && ! (r is ResourceListable)) {
+            return dartAnalyzer(r, project,
+              packageRoot: packageRoot, cmd: cmd,
+              uniqueLines: uniqueLines);
+          } else {
+            return new Future<Resource>.sync(() => r);
+          }
+        }
+        return new FutureFactory<Resource>(ret);
+      })
+    );
+    return runList.call().drain().then((_) => project);
   }
 }
 
 
+StreamTransformer<String, List<String>> createCsvTransformer(
+    [ Set<String> uniqueLines ]) {
+  var leftover = new StringBuffer();
+  var state = 0;
+  var currentRow = <String>[];
 
-
-
-List<List<String>> _csvParser(String data, Set<String> uniqueLines) {
-  var splitter = new LineSplitter();
-  var ret = <List<String>>[];
-  // FIXME This isn't right - need to unescape newlines that could join a cell
-  for (String line in splitter.convert(data)) {
-    if (! line.isEmpty &&
-        (uniqueLines == null || ! uniqueLines.contains(line))) {
-      if (uniqueLines != null) {
-        uniqueLines.add(line);
+  void sinkUniqueRow(sink, row) {
+    if (uniqueLines != null) {
+      var r = new StringBuffer();
+      r.writeAll(row, "|");
+      var s = r.toString();
+      if (uniqueLines.contains(s)) {
+        return;
       }
-      var row = <String>[];
-      for (String cell in line.split('|')) {
-        row.add(cell.replaceAll(new RegExp(r'\\\\'), '\\'));
-      }
-      ret.add(row);
+      uniqueLines.add(s);
     }
+    sink.add(new List<String>.from(row));
   }
-  return ret;
+
+  return new StreamTransformer<String, List<String>>.fromHandlers(
+      handleData: (value, sink) {
+        //print("**" + value.toString());
+        if (value != null) {
+          for (var p = 0; p < value.length; ++p) {
+            var c = new String.fromCharCode(value[p]);
+            switch (state) {
+              case 0: // normal inside cell
+                if (c == '\\') {
+                  state = 1;
+                } else if (c == '|') {
+                  // end of cell
+                  currentRow.add(leftover.toString());
+                  leftover.clear();
+                } else if (c == '\r' || c == '\n') {
+                  // end of row and cell
+                  if (currentRow.isNotEmpty || leftover.isNotEmpty) {
+                    currentRow.add(leftover.toString());
+                  }
+                  leftover.clear();
+                  if (currentRow.isNotEmpty) {
+                    sinkUniqueRow(sink, currentRow);
+                  }
+                  currentRow.clear();
+                  state = 2;
+                } else {
+                  leftover.write(c);
+                }
+                break;
+              case 1: // escape
+                if (c == 'n') {
+                  leftover.write("\n");
+                } else if (c == 'r') {
+                  leftover.write("\r");
+                } else if (c == 't') {
+                  leftover.write("\t");
+                } else {
+                  leftover.write(c);
+                }
+                state = 0;
+                break;
+              case 2: // end of row
+                if (c != '\n' && c != '\r') {
+                  leftover.write(c);
+                  state = 0;
+                }
+                break;
+              default:
+                throw new Exception("invalid state: " + state.toString());
+            }
+          }
+        }
+      },
+    handleDone: (sink) {
+      if (leftover.isNotEmpty) {
+        currentRow.add(leftover.toString());
+      }
+      if (currentRow.isNotEmpty) {
+        sinkUniqueRow(sink, currentRow);
+      }
+    });
 }
+
+
 
 
 
@@ -176,10 +256,10 @@ Future runAsUnitTest(Resource dartFile, Project project,
     testArgs = <String>[];
   }
   var response = new ReceivePort();
-  Future<Isolate> remote = Isolate.spawnUri(Uri.parse(dartFile.fullName,
-    testArgs, response.sendPort));
+  Future<Isolate> remote = Isolate.spawnUri(Uri.parse(dartFile.fullName),
+    testArgs, response.sendPort);
 
-  return remote.then((_) => response.forEach((msg) {
+  return remote.then((p) => response.forEach((msg) {
       project.logger.message(msg);
     }));
 }

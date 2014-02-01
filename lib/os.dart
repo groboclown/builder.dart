@@ -29,6 +29,7 @@
 library builder.exec;
 
 import 'dart:io';
+import 'dart:async';
 import 'resource.dart';
 import 'src/exceptions.dart';
 
@@ -115,7 +116,7 @@ List<String> splitPath(String path,
     isDosLike = Platform.isWindows;
   }
   if (pathSeparatorMatcher == null) {
-    pathSeparatorMatcher = r"[\;\:\" + Platform.pathSeparator + "]";
+    pathSeparatorMatcher = "[\\;\\:\\" + Platform.pathSeparator + "]";
   }
   var ret = <String>[];
   if (path == null) {
@@ -161,5 +162,87 @@ String _nextPathElement(StringBuffer path, bool isDosLike, String pathSep) {
 }
 
 
+/**
+ * A version of [Process].start that returns a [Future] with the process
+ * exit code when the process finishes running.  This allows the stream
+ * processing to happen as the [Process] runs, and still have a `then` call
+ * for the termination, rather than when the process starts.
+ *
+ * The [onStart] function is called after the [Process] future starts,
+ * to allow for additional setup of handling the running [Process].
+ */
+Future<int> processStartSync(String executable, List<String> arguments,
+    void onStart(Process),
+    {String workingDirectory, Map<String, String> environment,
+    bool includeParentEnvironment: true, bool runInShell: false}) {
+
+  var signal = new StreamController<int>();
+
+  var procFuture = Process.start(executable, arguments,
+      workingDirectory: workingDirectory,
+      environment: environment,
+      includeParentEnvironment: includeParentEnvironment,
+      runInShell: runInShell).then((process) {
+    onStart(process);
+    process.exitCode.then((code) {
+      signal.add(code);
+      signal.close();
+    });
+  });
+
+  return signal.stream.first;
+}
 
 
+
+
+typedef Future FutureFactoryUntyped();
+
+class FutureFactory<T> {
+  final FutureFactoryUntyped _call;
+  FutureFactory(this._call);
+
+  Future<T> call() {
+    return _call();
+  }
+}
+
+
+/**
+ * Serialize all the Future calls.
+ */
+Stream sequential(List<FutureFactoryUntyped> futureFactories) {
+  return new Sequential(futureFactories.map((f) => new FutureFactory(f))).call();
+}
+
+
+/**
+ * Typed invocation of [serialize].
+ */
+class Sequential<T> {
+  List<FutureFactory<T>> _factories;
+  Sequential(Iterable<FutureFactory<T>> factories) {
+    this._factories = new List<FutureFactory<T>>.from(factories,
+      growable: false);
+  }
+
+  Stream<T> call() {
+    var ret = new StreamController<T>();
+    var signal = new StreamController<int>();
+    signal.stream.listen((index) {
+      //print("handling factory #${index}");
+      if (index >= _factories.length) {
+        signal.close();
+        ret.close();
+      } else {
+        _factories[index]().then((v) {
+          ret.add(v);
+        })
+        .then((_) => signal.add(index + 1));
+      }
+    });
+    // begin the stream execution
+    signal.add(0);
+    return ret.stream;
+  }
+}

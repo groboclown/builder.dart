@@ -136,6 +136,16 @@ class BuilderConfiguration extends SimpleConfiguration {
 
     // FIXME send actual test result message
 
+    // Things to output (see TestCase):
+    // result.id;
+    // result.description;
+    // result.message;
+    // result.result;
+    // result.passed;
+    // result.stackTrace;
+    // result.currentGroup;
+    // result.startTime;
+    // result.runningTime;
   }
 
 }

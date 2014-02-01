@@ -268,8 +268,10 @@ class CmdLogger extends AbstractLogger {
   @override
   void output(TargetMethod tm, LogMessage message) {
     var params = message.createParams();
-    print(message.level.substring(0, 4).toUpperCase() + " [" + tm.name + "] " +
-      message.message);
+    print(message.level.substring(0,
+        message.level.length > 4 ? 4 : message.level.length)
+      .toUpperCase() + " [" + tm.name + "] " +
+        message.message);
     if (message is LogResourceMessage) {
       var rm = message;
       print("   in " + rm.file.fullName + ", line " + rm.line.toString() +

@@ -37,6 +37,7 @@ library builder.src.target;
 
 import 'dart:mirrors';
 import 'dart:collection';
+import 'dart:async';
 
 import 'project.dart';
 
@@ -112,7 +113,7 @@ abstract class TargetMethod {
    * Performs the operation of the target.  It throws a [BuildException]
    * on an error (see [exceptions.dart]).
    */
-  void call(Project project);
+  Future<Project> start(Project project);
 }
 
 
@@ -126,10 +127,13 @@ class AnnotatedTarget extends TargetMethod {
     super(MirrorSystem.getName(method.simpleName), targetDef);
 
   @override
-  void call(Project project) {
-    InstanceMirror im = owner.invoke(method.simpleName, [project]);
+  Future<Project> start(Project project) {
+    return new Future<Project>(() {
+      InstanceMirror im = owner.invoke(method.simpleName, [ project ]);
+      // Does this need explicit error checking?
 
-    // Does this need error checking?
+      return project;
+    });
   }
 
 }

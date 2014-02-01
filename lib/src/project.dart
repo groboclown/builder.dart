@@ -25,10 +25,13 @@
 
 library builder.src.project;
 
+import 'dart:async';
+
 import 'logger.dart';
 import 'argparser.dart';
 import 'target.dart';
 import 'exceptions.dart';
+import '../os.dart';
 import '../resource.dart';
 
 class Project {
@@ -103,20 +106,25 @@ class Project {
       throw new Exception("null target");
     }
 
+    Project parent = this;
+
     // run the dependencies and the target.  Only check the whole dependency
     // tree if this is the first target run.
+
+    List<FutureFactory<Project>> futures = <FutureFactory<Project>>[];
+
     for (TargetMethod tm in _dependencyList(targets, _invokedTargets.isEmpty)) {
       if (! _invokedTargets.contains(tm)) {
-        // This could be a future, as long as the dependency list is honored
-        // and checked for completion before running.  It would mean changing
-        // the _invokedTargets to instead be a Map of futures.
-
-        Project child = new _ChildProject(this, tm);
-        child.logger.info("begin");
-        tm.call(child);
-        child.logger.info("end");
+        futures.add(new FutureFactory<Project>(() {
+          var p = new _ChildProject(parent, tm);
+          p.logger.info("=>");
+          return tm.start(p).then((p) { p.logger.info("<="); return p;});
+        }));
+        _invokedTargets.add(tm);
       }
     }
+
+    new Sequential<Project>(futures).call().drain();
   }
 
 
