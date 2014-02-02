@@ -31,7 +31,6 @@ import 'logger.dart';
 import 'argparser.dart';
 import 'target.dart';
 import 'exceptions.dart';
-import '../os.dart';
 import '../resource.dart';
 
 class Project {
@@ -41,6 +40,7 @@ class Project {
   final Map<String, String> _properties = {};
   final ResourceCollection changed;
   final ResourceCollection removed;
+  final List<List> _errors = []; // list of [ exception, stacktrace, bool ]
 
   Project.parse(BuildArgs args) :
       _baseLogger = args.logger,
@@ -92,8 +92,8 @@ class Project {
   }
 
 
-  void build(String target) {
-    buildTargets([ findTarget(target) ]);
+  Future<int> build(String target) {
+    return buildTargets([ findTarget(target) ]);
   }
 
 
@@ -101,61 +101,38 @@ class Project {
    * Run the full build for this specific [TargetMethod].  It will not repeat
    * any target that has already been run in this project.
    */
-  void buildTargets(List<TargetMethod> targets) {
+  Future<int> buildTargets(List<TargetMethod> targets) {
     if (targets == null) {
       throw new Exception("null target");
     }
+
+    // FIXME use 'dart:async' runZoned(the stuff below, onErrorHandler)
+    // to correctly handle the errors generated.
 
     Project parent = this;
 
     // run the dependencies and the target.  Only check the whole dependency
     // tree if this is the first target run.
 
-    // This attempt breaks Futures:
-    /*
-    Future<Future<Project>> future = new Future<Future<Project>>(
-            () => new Future<Project>(() => parent));
-    for (TargetMethod tm in _dependencyList(targets, _invokedTargets.isEmpty)) {
-      if (! _invokedTargets.contains(tm)) {
-        future = future.then((fp) => fp.then((p) {
-          var p2 = new _ChildProject(parent, tm);
-          p2.logger.info("=>");
-          return tm.start(p2).then((p3) { p3.logger.info("<="); return parent;});
-        }));
-        _invokedTargets.add(tm);
-      }
-    }
-    */
-
-    /*
-    List<FutureFactory<Project>> futures = <FutureFactory<Project>>[];
-
-
-    for (TargetMethod tm in _dependencyList(targets, _invokedTargets.isEmpty)) {
-      if (! _invokedTargets.contains(tm)) {
-        futures.add(new FutureFactory<Project>(() {
-          var p = new _ChildProject(parent, tm);
-          p.logger.info("=>");
-          return tm.start(p).then((p) { p.logger.info("<="); return p;});
-        }));
-        _invokedTargets.add(tm);
-      }
-    }
-    new Sequential<Project>(futures).call().drain();
-    */
-
     Future<Project> rootFuture = new Future<Project>.sync(() => parent);
     Future<Project> future = rootFuture;
     for (TargetMethod tm in _dependencyList(targets, _invokedTargets.isEmpty)) {
       if (! _invokedTargets.contains(tm)) {
-        future = future.then((p) {
+        future = future.then((parent) {
+          if (_checkErrors()) {
+            return rootFuture;
+          }
           var p = new _ChildProject(parent, tm);
           p.logger.info("=>");
-          return tm.start(p).then((p) { p.logger.info("<="); return rootFuture;});
+          return tm.start(p).catchError(
+                (e, stacktrace) => addError(e, stacktrace))
+              .then((pr) { pr.logger.info("<="); return rootFuture;});
         });
         _invokedTargets.add(tm);
       }
     }
+
+    return future.then((p) => _checkErrors() ? 1 : 0);
   }
 
 
@@ -169,6 +146,44 @@ class Project {
     }
     return matches[0];
   }
+
+
+  void addError(var e, StackTrace stacktrace) {
+    print("caught error " + e.toString());
+    _errors.add([ e, stacktrace, true ]);
+  }
+
+
+  bool _checkErrors() {
+    for (var es in _errors) {
+      if (es[3]) {
+        if (es[0] is BuildException) {
+          _handleBuildException(es[0], es[1]);
+        } else {
+          _handleError(es[0], es[1]);
+        }
+        es[3] = false;
+      }
+    }
+    return _errors.isNotEmpty;
+  }
+
+
+  void _handleBuildException(BuildException e, StackTrace stacktrace) {
+    TargetMethod tm = null;
+    if (e is BuildExecutionException) {
+      tm = e.target;
+    }
+    _baseLogger.output(tm, new LogMessage(level: ERROR, message: e.toString()));
+  }
+
+
+  void _handleError(var e, StackTrace stacktrace) {
+    print("ERROR: " + e.toString());
+    print(stacktrace.toString());
+  }
+
+
 
 
   /**

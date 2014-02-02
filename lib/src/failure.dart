@@ -26,7 +26,8 @@ library builder.src.failure;
 
 
 import '../resource.dart';
-
+import 'project.dart';
+import 'exceptions.dart';
 
 class Failure {
   final Project project;
@@ -51,23 +52,67 @@ class Failure {
 }
 
 
-typedef void FailureMode(Project project, String failureMessage,
-    Resource file, int line, int charStart, int charEnd);
+typedef void FailureMode(Failure failure);
+
+FailureMode DEFAULT_FAILURE_MODE = STOP_ON_FAILURE;
 
 
-
-final FailureMode IGNORE_FAILURES = (p, m, f, l, s, e) {
-  if (f == null) {
-    p.logger.info(m);
+final FailureMode IGNORE_FAILURE = (Failure failure) {
+  if (failure.resource == null) {
+    failure.project.logger.info(failure.failureMessage);
   } else {
-    p.logger.fileInfo(
-        tool: p.activeTarget.name,
-        file: f,
-        line: l,
-        charStart: s,
-        charEnd: e,
-        message: m);
+    failure.project.logger.fileInfo(
+        tool: failure.project.activeTarget.name,
+        file: failure.resource,
+        line: failure.line,
+        charStart: failure.charStart,
+        charEnd: failure.charEnd,
+        message: failure.failureMessage);
   }
 };
 
+final FailureMode WARN_ON_FAILURE = (Failure failure) {
+  if (failure.resource == null) {
+    failure.project.logger.warn(failure.failureMessage);
+  } else {
+    failure.project.logger.fileInfo(
+        tool: failure.project.activeTarget.name,
+        file: failure.resource,
+        line: failure.line,
+        charStart: failure.charStart,
+        charEnd: failure.charEnd,
+        message: failure.failureMessage);
+  }
+};
 
+final FailureMode STOP_ON_FAILURE = (Failure failure) {
+  throw new ToolException(failure.project.activeTarget,
+      failure.resource == null ? null : failure.resource.fullName,
+      failure.line, failure.charStart,
+      failure.charEnd, failure.failureMessage);
+};
+
+
+
+void handleFailure(Project project, {
+    FailureMode mode: null,
+    String failureMessage: null,
+    Resource resource: null,
+    int line: null,
+    int charStart: null,
+    int charEnd: null}) {
+  if (mode == null) {
+    mode = DEFAULT_FAILURE_MODE;
+    if (mode == null) {
+      // Bad setup, but we'll allow it.  Should report a warning, though.
+      mode = STOP_ON_FAILURE;
+    }
+  }
+  if (project == null) {
+    // Bad tool - should always pass in the project
+    throw new BuildSetupException(failureMessage);
+  }
+  var f = new Failure(project, failureMessage, resource: resource,
+      line: line, charStart: charStart, charEnd: charEnd);
+  mode(f);
+}

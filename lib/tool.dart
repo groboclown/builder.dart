@@ -63,6 +63,10 @@ import 'src/target.dart';
 export 'src/target.dart' show
   TargetMethod, target;
 
+//import 'src/failure.dart';
+export 'src/failure.dart' show
+  FailureMode, handleFailure;
+
 const String TARGET_CLEAN = "clean";
 const String TARGET_BUILD = "build";
 const String TARGET_ASSEMBLE = "assemble";

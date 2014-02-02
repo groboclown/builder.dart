@@ -34,7 +34,12 @@ export 'tool.dart' show
     Pipe, BuildTool, addPhase, getTargets,
     PHASE_CLEAN, PHASE_BUILD, PHASE_ASSEMBLE, PHASE_DEPLOY;
 export 'resource.dart';
+export 'src/failure.dart' show
+    FailureMode, Failure,
+    DEFAULT_FAILURE_MODE, IGNORE_FAILURE, WARN_ON_FAILURE, STOP_ON_FAILURE;
 
+import 'dart:io';
+import 'dart:async';
 
 /**
  * The declarative build tool.
@@ -60,14 +65,16 @@ void build(List<String> args, { libraryName: "build" }) {
     tool.getTargets(libraryName: libraryName));
   var project = new Project.parse(buildArgs);
   var changedTargets = decl.computeChanges(project);
+  Future<int> code;
   if (buildArgs.calledTargets.isEmpty && changedTargets.isEmpty) {
     // TODO see if this should be the "default" target instead.
-    project.buildTargets( <tool.TargetMethod>[ tool.TARGET_NOOP ] );
+    code = project.buildTargets( <tool.TargetMethod>[ tool.TARGET_NOOP ] );
   } else if (buildArgs.calledTargets.isEmpty) {
-    project.buildTargets(changedTargets);
+    code = project.buildTargets(changedTargets);
   } else {
-    project.buildTargets(buildArgs.calledTargets);
+    code = project.buildTargets(buildArgs.calledTargets);
   }
+  code.then((c) => exit(code));
 }
 
 

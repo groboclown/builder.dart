@@ -116,6 +116,63 @@ class PropertyRedefinitionException extends BuildExecutionException {
 }
 
 
+class ToolException extends BuildExecutionException {
+  final String file;
+  final int line;
+  final int charStart;
+  final int charEnd;
+  final String failureMessage;
+
+  factory ToolException(TargetMethod target, String file,
+                int line, int charStart, int charEnd, String failureMessage) {
+    var msg = new StringBuffer("target '");
+    msg
+      ..write(target.name)
+      ..write("' failed with '")
+      ..write(failureMessage)
+      ..write("'");
+    if (file != null) {
+      msg
+        ..write(" on '")
+        ..write(file)
+        ..write("'");
+      if (line != null) {
+        msg
+          ..write(" line ")
+          ..write(line);
+      }
+      if (charStart != null) {
+        if (line != null) {
+          msg.write(", ");
+        }
+        msg
+          ..write(" column ")
+          ..write(charStart);
+        if (charEnd != null) {
+          msg
+            ..write("-")
+            ..write(charEnd);
+        }
+      }
+      return new ToolException._(target, msg.toString(), file,
+          line, charStart, charEnd, failureMessage);
+    }
+
+  }
+
+  ToolException._(TargetMethod target, String message, String file,
+      int line, int charStart, int charEnd, String failureMessage) :
+      this.file = file,
+      this.line = line,
+      this.charStart = charStart,
+      this.charEnd = charEnd,
+      this.failureMessage = failureMessage,
+      super(target, message);
+
+
+}
+
+
 
 class NoRunningTargetException extends BuildSetupException {
   NoRunningTargetException() : super("no running target");

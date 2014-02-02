@@ -56,7 +56,7 @@ final String DART_ANALYZER_NAME = "dartanalyzer";
 Future<Project> dartAnalyzer(
     Resource dartFile, Project project,
     { DirectoryResource packageRoot: null, String cmd: null,
-    Set<String> uniqueLines: null }) {
+    Set<String> uniqueLines: null, StreamController<LogMessage> messages }) {
   if (cmd == null) {
     cmd = DART_ANALYZER_NAME;
   }
@@ -76,7 +76,6 @@ Future<Project> dartAnalyzer(
   project.logger.debug("Running [" + exec.fullName + "] with arguments " +
     args.toString());
 
-
   return Process.start(exec.fullName, args).then((process) {
     // add stdout and stderr into a single stream
     process.stderr.transform(createCsvTransformer(uniqueLines))
@@ -93,6 +92,7 @@ Future<Project> dartAnalyzer(
               charEnd: int.parse(row[5]) + int.parse(row[6]),
               message: row[7]
           );
+          messages.add(msg);
           project.logger.message(msg);
         }
       });
@@ -111,12 +111,16 @@ Future<Project> dartAnalyzer(
 class DartAnalyzer extends BuildTool {
   final String cmd;
   final DirectoryResource packageRoot;
+  final FailureMode onFailure;
+  final FailureMode onWarning;
+  final FailureMode onInfo;
 
   factory DartAnalyzer(String name,
       { String description: "", String phase: PHASE_BUILD,
         ResourceCollection dartFiles: null, List<String> depends: null,
         DirectoryResource packageRoot: null,
-        String cmd: null }) {
+        String cmd: null, FailureMode onFailure: null,
+        FailureMode onWarning: null, FailureMode onInfo: null }) {
     if (depends == null) {
       depends = <String>[];
     }
@@ -124,13 +128,17 @@ class DartAnalyzer extends BuildTool {
     var pipe = new Pipe.list(dartFiles.entries(), <Resource>[]);
     var targetDef = BuildTool
       .mkTargetDef(name, description, phase, pipe, depends, <String>[]);
-    return new DartAnalyzer._(name, targetDef, phase, pipe, cmd, packageRoot);
+    return new DartAnalyzer._(name, targetDef, phase, pipe, cmd, packageRoot,
+      onFailure, onWarning, onInfo);
   }
 
 
   DartAnalyzer._(String name, target targetDef, String phase, Pipe pipe,
-    String cmd, DirectoryResource packageRoot) :
+    String cmd, DirectoryResource packageRoot, FailureMode onFailure,
+    FailureMode onWarning, FailureMode onInfo) :
     this.cmd = cmd, this.packageRoot = packageRoot,
+    this.onFailure = onFailure, this.onWarning = onWarning,
+    this.onInfo = onInfo,
     super(name, targetDef, phase, pipe);
 
 
@@ -146,17 +154,60 @@ class DartAnalyzer extends BuildTool {
 
     var uniqueLines = new Set<String>();
 
+    var hadWarnings = false;
+    var hadErrors = false;
+    var hadInfo = false;
+    StreamController<LogMessage> messages = new StreamController<LogMessage>();
+    messages.stream.listen((LogMessage msg) {
+      if (msg.level.startsWith("warn")) {
+        hadWarnings = true;
+      }
+      if (msg.level.startsWith("err")) {
+        hadErrors = true;
+      }
+      if (msg.level.startsWith("info")) {
+        hadInfo = true;
+      }
+    });
+
+
     // Chain the calls, rather than running in parallel.
     // For running in parallel, we create all the Futures in the
     // calls to dartAnalyzer, then return a Future.wait() on all of them.
-    Future<Project> ret = new Future<Project>.sync(() => project);
+    Future<Project> ret = null;
     for (Resource r in inp) {
       if (r.exists && ! (r is ResourceListable)) {
-        ret = ret.then((project) => dartAnalyzer(r, project,
-          packageRoot: packageRoot, cmd: cmd,
-          uniqueLines: uniqueLines));
+        Future<Project> next(Project p) {
+          return dartAnalyzer(r, p,
+            packageRoot: packageRoot, cmd: cmd,
+            uniqueLines: uniqueLines, messages: messages);
+        }
+        if (ret == null) {
+          ret = next(project);
+        } else {
+          ret = ret.then(next);
+        }
       }
     }
+    ret.then((proj) {
+      messages.close();
+      if (hadErrors) {
+        handleFailure(proj,
+            mode: onFailure,
+            failureMessage: "one or more files had errors");
+      }
+      if (hadWarnings && onWarning != null) {
+        handleFailure(proj,
+            mode: onWarning,
+            failureMessage: "one or more files had warnings");
+      }
+      if (hadInfo && onInfo != null) {
+        handleFailure(proj,
+        mode: onInfo,
+        failureMessage: "one or more files had info messages");
+      }
+      return proj;
+    });
     return ret;
   }
 }
