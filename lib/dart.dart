@@ -53,7 +53,7 @@ final String DART_ANALYZER_NAME = "dartanalyzer";
  * The [packageRoot] is the package directory.  The returned [Future]
  * executes when the process completes.
  */
-Future<Resource> dartAnalyzer(
+Future<Project> dartAnalyzer(
     Resource dartFile, Project project,
     { DirectoryResource packageRoot: null, String cmd: null,
     Set<String> uniqueLines: null }) {
@@ -75,7 +75,9 @@ Future<Resource> dartAnalyzer(
 
   project.logger.debug("Running [" + exec.fullName + "] with arguments " +
     args.toString());
-  return processStartSync(exec.fullName, args, (process) {
+
+
+  return Process.start(exec.fullName, args).then((process) {
     // add stdout and stderr into a single stream
     process.stderr.transform(createCsvTransformer(uniqueLines))
       .listen((List<String> row) {
@@ -96,11 +98,13 @@ Future<Resource> dartAnalyzer(
       });
     process.stdout.transform(new LineSplitter()).listen((String data) {
       project.logger.fileInfo(tool: "dartanalyzer",
-          file: dartFile, message: data);
+      file: dartFile, message: data);
     });
+    return process.exitCode;
   }).then((code) {
     project.logger.info("Completed processing " + dartFile.name);
-  }).then((_) => dartFile);
+    return new Future<Project>(() => project);
+  });
 }
 
 
@@ -145,21 +149,15 @@ class DartAnalyzer extends BuildTool {
     // Chain the calls, rather than running in parallel.
     // For running in parallel, we create all the Futures in the
     // calls to dartAnalyzer, then return a Future.wait() on all of them.
-    var runList = new Sequential<Resource>(
-      inp.map((r) {
-        Future<Resource> ret() {
-          if (r.exists && ! (r is ResourceListable)) {
-            return dartAnalyzer(r, project,
-              packageRoot: packageRoot, cmd: cmd,
-              uniqueLines: uniqueLines);
-          } else {
-            return new Future<Resource>.sync(() => r);
-          }
-        }
-        return new FutureFactory<Resource>(ret);
-      })
-    );
-    return runList.call().drain().then((_) => project);
+    Future<Project> ret = new Future<Project>.sync(() => project);
+    for (Resource r in inp) {
+      if (r.exists && ! (r is ResourceListable)) {
+        ret = ret.then((project) => dartAnalyzer(r, project,
+          packageRoot: packageRoot, cmd: cmd,
+          uniqueLines: uniqueLines));
+      }
+    }
+    return ret;
   }
 }
 
@@ -258,6 +256,9 @@ Future runAsUnitTest(Resource dartFile, Project project,
   var response = new ReceivePort();
   Future<Isolate> remote = Isolate.spawnUri(Uri.parse(dartFile.fullName),
     testArgs, response.sendPort);
+
+
+  // FIXME
 
   return remote.then((p) => response.forEach((msg) {
       project.logger.message(msg);

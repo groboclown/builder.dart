@@ -220,11 +220,9 @@ Stream sequential(List<FutureFactoryUntyped> futureFactories) {
  * Typed invocation of [serialize].
  */
 class Sequential<T> {
-  List<FutureFactory<T>> _factories;
-  Sequential(Iterable<FutureFactory<T>> factories) {
-    this._factories = new List<FutureFactory<T>>.from(factories,
-      growable: false);
-  }
+  final List<FutureFactory<T>> _factories;
+  Sequential(Iterable<FutureFactory<T>> factories) :
+    _factories = new List<FutureFactory<T>>.from(factories, growable: false);
 
   Stream<T> call() {
     var ret = new StreamController<T>();
@@ -237,12 +235,61 @@ class Sequential<T> {
       } else {
         _factories[index]().then((v) {
           ret.add(v);
-        })
-        .then((_) => signal.add(index + 1));
+          signal.add(index + 1);
+          return v;
+        });
       }
     });
     // begin the stream execution
     signal.add(0);
     return ret.stream;
   }
+}
+
+
+
+typedef Future FutureChainedFactoryUntyped(value);
+
+class FutureChainedFactory<T> {
+  final FutureChainedFactoryUntyped _call;
+  FutureChainedFactory(this._call);
+  Future<T> call(T value) {
+    return _call(value);
+  }
+}
+
+class _ChainedIndex<T> {
+  final int index;
+  final T value;
+  const _ChainedIndex(this.index, this.value);
+}
+
+class SequentialChained<T> {
+  final List<FutureChainedFactory<T>> _factories;
+  SequentialChained(Iterable<FutureChainedFactory<T>> factories) :
+    this._factories = new List<FutureChainedFactory<T>>.from(factories,
+      growable: false);
+
+  Stream<T> call(initialValue) {
+    var ret = new StreamController<T>();
+    var signal = new StreamController<_ChainedIndex<T>>();
+    signal.stream.listen((index) {
+      if (index.index >= _factories.length) {
+        signal.close();
+        ret.close();
+      } else {
+        _factories[index.index](index.value).then((v) {
+          ret.add(v);
+          signal.add(new _ChainedIndex(index + 1, v));
+          return v;
+        });
+      }
+    });
+    signal.add(new _ChainedIndex(0, initialValue));
+    return signal.stream;
+  }
+}
+
+Stream sequentialChained(List<FutureFactoryUntyped> futureFactories, [ initialValue ]) {
+  return new Sequential(futureFactories.map((f) => new FutureChainedFactory(f))).call(initialValue);
 }

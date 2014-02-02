@@ -111,7 +111,25 @@ class Project {
     // run the dependencies and the target.  Only check the whole dependency
     // tree if this is the first target run.
 
+    // This attempt breaks Futures:
+    /*
+    Future<Future<Project>> future = new Future<Future<Project>>(
+            () => new Future<Project>(() => parent));
+    for (TargetMethod tm in _dependencyList(targets, _invokedTargets.isEmpty)) {
+      if (! _invokedTargets.contains(tm)) {
+        future = future.then((fp) => fp.then((p) {
+          var p2 = new _ChildProject(parent, tm);
+          p2.logger.info("=>");
+          return tm.start(p2).then((p3) { p3.logger.info("<="); return parent;});
+        }));
+        _invokedTargets.add(tm);
+      }
+    }
+    */
+
+    /*
     List<FutureFactory<Project>> futures = <FutureFactory<Project>>[];
+
 
     for (TargetMethod tm in _dependencyList(targets, _invokedTargets.isEmpty)) {
       if (! _invokedTargets.contains(tm)) {
@@ -123,8 +141,21 @@ class Project {
         _invokedTargets.add(tm);
       }
     }
-
     new Sequential<Project>(futures).call().drain();
+    */
+
+    Future<Project> rootFuture = new Future<Project>.sync(() => parent);
+    Future<Project> future = rootFuture;
+    for (TargetMethod tm in _dependencyList(targets, _invokedTargets.isEmpty)) {
+      if (! _invokedTargets.contains(tm)) {
+        future = future.then((p) {
+          var p = new _ChildProject(parent, tm);
+          p.logger.info("=>");
+          return tm.start(p).then((p) { p.logger.info("<="); return rootFuture;});
+        });
+        _invokedTargets.add(tm);
+      }
+    }
   }
 
 
