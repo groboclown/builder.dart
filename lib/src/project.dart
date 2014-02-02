@@ -142,11 +142,15 @@ class Project {
             "Nothing to do.  Use '--help' to see all the options."));
       }
       future.then((p) {
-        statusStream.add(
-          _checkErrors() ? 1 : 0);
+        statusStream.add(0);
         statusStream.close();
       });
-    }, onError: addError);
+    }, onError: (e, s) {
+      addError(e, s);
+      _checkErrors();
+      statusStream.add(1);
+      statusStream.close();
+    });
 
     return statusStream.stream.first;
   }
@@ -165,7 +169,7 @@ class Project {
 
 
   void addError(var e, StackTrace stacktrace) {
-    print("caught error " + e.toString() + "\n" + stacktrace.toString());
+    //print("caught error " + e.toString() + "\n" + stacktrace.toString());
     _errors.add([ e, stacktrace, true ]);
   }
 
@@ -191,8 +195,8 @@ class Project {
       tm = e.target;
     }
     _baseLogger.output(tm, new LogMessage(level: ERROR, message: e.toString()));
-    // TODO this should be a debug mode
-    print(stacktrace.toString());
+    // TODO this should be only printed in debug mode
+    //print(stacktrace.toString());
   }
 
 
