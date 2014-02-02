@@ -86,7 +86,18 @@ final FailureMode WARN_ON_FAILURE = (Failure failure) {
 };
 
 final FailureMode STOP_ON_FAILURE = (Failure failure) {
-  throw new ToolException(failure.project.activeTarget,
+  if (failure == null) {
+    throw new Exception("failure is null");
+  }
+  if (failure.project == null) {
+    throw new Exception("failure project is null");
+  }
+  if (failure.project.activeTarget == null) {
+    throw new Exception("activeTarget is null");
+  }
+  //throw new Exception("don't see anything wrong");
+  throw new ToolException(
+      failure.project.activeTarget,
       failure.resource == null ? null : failure.resource.fullName,
       failure.line, failure.charStart,
       failure.charEnd, failure.failureMessage);

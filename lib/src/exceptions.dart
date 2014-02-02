@@ -26,7 +26,6 @@ library builder.src.exceptions;
 
 import 'target.dart';
 
-
 class BuildException implements Exception {
   final String message;
 
@@ -123,11 +122,22 @@ class ToolException extends BuildExecutionException {
   final int charEnd;
   final String failureMessage;
 
-  factory ToolException(TargetMethod target, String file,
-                int line, int charStart, int charEnd, String failureMessage) {
+  ToolException(TargetMethod target, String file,
+                int line, int charStart, int charEnd, String failureMessage) :
+    this.file = file,
+    this.line = line,
+    this.charStart = charStart,
+    this.charEnd = charEnd,
+    this.failureMessage = failureMessage,
+    super(target, ToolException._toString(
+        target, file, line, charStart, charEnd, failureMessage));
+
+
+  static String _toString(TargetMethod target, String file,
+      int line, int charStart, int charEnd, String failureMessage) {
     var msg = new StringBuffer("target '");
     msg
-      ..write(target.name)
+      ..write(target == null ? "(unknown)" : target.name)
       ..write("' failed with '")
       ..write(failureMessage)
       ..write("'");
@@ -154,22 +164,9 @@ class ToolException extends BuildExecutionException {
             ..write(charEnd);
         }
       }
-      return new ToolException._(target, msg.toString(), file,
-          line, charStart, charEnd, failureMessage);
     }
-
+    return msg.toString();
   }
-
-  ToolException._(TargetMethod target, String message, String file,
-      int line, int charStart, int charEnd, String failureMessage) :
-      this.file = file,
-      this.line = line,
-      this.charStart = charStart,
-      this.charEnd = charEnd,
-      this.failureMessage = failureMessage,
-      super(target, message);
-
-
 }
 
 

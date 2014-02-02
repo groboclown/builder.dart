@@ -110,29 +110,45 @@ class Project {
     // to correctly handle the errors generated.
 
     Project parent = this;
-
-    // run the dependencies and the target.  Only check the whole dependency
-    // tree if this is the first target run.
-
     Future<Project> rootFuture = new Future<Project>.sync(() => parent);
     Future<Project> future = rootFuture;
-    for (TargetMethod tm in _dependencyList(targets, _invokedTargets.isEmpty)) {
-      if (! _invokedTargets.contains(tm)) {
-        future = future.then((parent) {
-          if (_checkErrors()) {
-            return rootFuture;
-          }
-          var p = new _ChildProject(parent, tm);
-          p.logger.info("=>");
-          return tm.start(p).catchError(
-                (e, stacktrace) => addError(e, stacktrace))
-              .then((pr) { pr.logger.info("<="); return rootFuture;});
-        });
-        _invokedTargets.add(tm);
-      }
-    }
+    StreamController<int> statusStream = new StreamController<int>();
 
-    return future.then((p) => _checkErrors() ? 1 : 0);
+    runZoned(() {
+      int addedCount = 0;
+      // run the dependencies and the target.  Only check the whole dependency
+      // tree if this is the first target run.
+      for (TargetMethod tm in _dependencyList(targets, _invokedTargets.isEmpty)) {
+        if (! _invokedTargets.contains(tm)) {
+          addedCount++;
+          future = future.then((parent) {
+            if (_checkErrors()) {
+              return rootFuture;
+            }
+            var p = new _ChildProject(parent, tm);
+            p.logger.info("=>");
+            return tm.start(p)
+              .then((pr) {
+                pr.logger.info("<=");
+                return rootFuture;
+              });
+          });
+          _invokedTargets.add(tm);
+        }
+      }
+
+      if (addedCount <= 0) {
+        future = future.then((p) => print(
+            "Nothing to do.  Use '--help' to see all the options."));
+      }
+      future.then((p) {
+        statusStream.add(
+          _checkErrors() ? 1 : 0);
+        statusStream.close();
+      });
+    }, onError: addError);
+
+    return statusStream.stream.first;
   }
 
 
@@ -149,20 +165,20 @@ class Project {
 
 
   void addError(var e, StackTrace stacktrace) {
-    print("caught error " + e.toString());
+    print("caught error " + e.toString() + "\n" + stacktrace.toString());
     _errors.add([ e, stacktrace, true ]);
   }
 
 
   bool _checkErrors() {
     for (var es in _errors) {
-      if (es[3]) {
-        if (es[0] is BuildException) {
+      if (es[2]) {
+        if (es [0] != null && es[0] is BuildException) {
           _handleBuildException(es[0], es[1]);
         } else {
           _handleError(es[0], es[1]);
         }
-        es[3] = false;
+        es[2] = false;
       }
     }
     return _errors.isNotEmpty;
@@ -175,6 +191,8 @@ class Project {
       tm = e.target;
     }
     _baseLogger.output(tm, new LogMessage(level: ERROR, message: e.toString()));
+    // TODO this should be a debug mode
+    print(stacktrace.toString());
   }
 
 
@@ -335,10 +353,10 @@ class _ChildProject extends Project {
   TargetMethod findTarget(String name) => _parent.findTarget(name);
 
   @override
-  void build(String target) => _parent.build(target);
+  Future<int> build(String target) => _parent.build(target);
 
   @override
-  void buildTargets(List<TargetMethod> targets) => _parent.buildTargets(targets);
+  Future<int> buildTargets(List<TargetMethod> targets) => _parent.buildTargets(targets);
 
 }
 

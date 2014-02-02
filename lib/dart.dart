@@ -189,24 +189,30 @@ class DartAnalyzer extends BuildTool {
         }
       }
     }
-    ret.then((proj) {
+    ret = ret.then((_) {
+      if (project == null) {
+        throw new Exception("project is null");
+      }
+      if (project.activeTarget == null) {
+        throw new Exception("project.activeTarget is null");
+      }
       messages.close();
       if (hadErrors) {
-        handleFailure(proj,
+        handleFailure(project,
             mode: onFailure,
             failureMessage: "one or more files had errors");
       }
       if (hadWarnings && onWarning != null) {
-        handleFailure(proj,
+        handleFailure(project,
             mode: onWarning,
             failureMessage: "one or more files had warnings");
       }
       if (hadInfo && onInfo != null) {
-        handleFailure(proj,
-        mode: onInfo,
-        failureMessage: "one or more files had info messages");
+        handleFailure(project,
+            mode: onInfo,
+            failureMessage: "one or more files had info messages");
       }
-      return proj;
+      return new Future<Project>.sync(() => project);
     });
     return ret;
   }

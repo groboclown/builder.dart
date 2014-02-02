@@ -74,7 +74,7 @@ void build(List<String> args, { libraryName: "build" }) {
   } else {
     code = project.buildTargets(buildArgs.calledTargets);
   }
-  code.then((c) => exit(code));
+  code.then((c) => exit(c));
 }
 
 
