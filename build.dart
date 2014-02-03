@@ -33,8 +33,8 @@ import 'package:builder/dart.dart';
 import 'package:builder/std.dart';
 
 final DirectoryResource OUTPUT_DIR = filenameAsDir(ROOTDIR, ".work");
-
-final UNIT_TEST_SUMMARY_FILE = filenameToResource(".work/unit_test_summary.json");
+final DirectoryResource TEST_SUMMARY_DIR =
+    filenameAsDir(OUTPUT_DIR, "test-results");
 
 
 
@@ -48,13 +48,13 @@ final dartAnalyzer = new DartAnalyzer("lint",
 
 final cleanOutput = new Delete("clean-output",
     description: "Clean the generated files",
-    files: new DeepListableResourceCollection(OUTPUT_DIR, null, null));
+    files: new DeepListableResourceCollection(OUTPUT_DIR, null, null, true));
 
 
 final unitTests = new UnitTests("test",
     description: "Run unit tests and generate summary report",
     testFiles: TEST_FILES,
-    summaryFile: UNIT_TEST_SUMMARY_FILE);
+    summaryDir: TEST_SUMMARY_DIR);
 
 
 void main(List<String> args) {

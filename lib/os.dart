@@ -29,6 +29,7 @@
 library builder.exec;
 
 import 'dart:io';
+import 'dart:async';
 import 'resource.dart';
 import 'src/exceptions.dart';
 
@@ -159,8 +160,4 @@ String _nextPathElement(StringBuffer path, bool isDosLike, String pathSep) {
   }
   return ret.trim();
 }
-
-
-
-
 

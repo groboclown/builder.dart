@@ -66,6 +66,7 @@ import 'src/logger.dart';
 
 class BuilderConfiguration extends SimpleConfiguration {
   BuilderConfiguration(SendPort replyTo) {
+    print("start builder");
     // FIXME
 
     throwOnTestFailures = false;
@@ -73,6 +74,7 @@ class BuilderConfiguration extends SimpleConfiguration {
 
   @override
   void onInit() {
+    print("onInit");
     super.onInit();
     filterStacks = formatStacks = true;
   }
@@ -82,6 +84,7 @@ class BuilderConfiguration extends SimpleConfiguration {
     super.onTestStart(testCase);
 
     // FIXME send log message
+    print("onTestStart " + testCase.description);
   }
 
   @override
@@ -89,6 +92,7 @@ class BuilderConfiguration extends SimpleConfiguration {
     super.onTestResult(testCase);
 
     // FIXME send log message
+    print("onTestResult " + testCase.description);
   }
 
   /**
@@ -101,6 +105,7 @@ class BuilderConfiguration extends SimpleConfiguration {
     super.onTestResultChanged(testCase);
 
     // FIXME send log message
+    print("onTestResultChanged " + testCase.description);
   }
 
   /**
@@ -109,6 +114,7 @@ class BuilderConfiguration extends SimpleConfiguration {
   @override
   void onLogMessage(TestCase testCase, String message) {
     // FIXME send log message
+    print("onLogMessage " + testCase.description + "[" + message + "]");
   }
 
   /**
@@ -119,6 +125,7 @@ class BuilderConfiguration extends SimpleConfiguration {
   void onDone(bool success) {
     super.onDone(success);
 
+    print("onDone " + success);
     // FIXME send log message
     // FIXME close port
   }

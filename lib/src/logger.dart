@@ -140,6 +140,11 @@ class LogMessage {
       "message": message
     };
   }
+
+
+  Map<String, dynamic> toJson() {
+    return { "method": level, "params": createParams };
+  }
 }
 
 

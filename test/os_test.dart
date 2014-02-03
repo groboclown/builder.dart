@@ -23,9 +23,9 @@
 
 library os_test;
 
-import 'package:unittest/unittest.dart';
-import 'package:unittest/vm_config.dart';
 
+import 'package:builder/unittest.dart';
+import 'package:unittest/vm_config.dart';
 import 'package:builder/os.dart';
 
 
@@ -87,8 +87,8 @@ all_tests() {
 
 
 
-main(List<String> args) {
-  useVMConfiguration();
+main(List<String> args, [ replyTo ]) {
+  selectConfiguration(replyTo, useVMConfiguration);
   all_tests();
   if (!args.isEmpty) {
     filterTests(args[0]);

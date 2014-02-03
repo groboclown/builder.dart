@@ -298,47 +298,56 @@ StreamTransformer<String, List<String>> createCsvTransformer(
 
 
 
+/**
+ * Outputs messages to test result files.
+ */
+typedef Future TestResultWriter(DirectoryResource basedir, Resource testFile,
+    Stream<LogMessage> messages);
 
-Stream<LogMessage> runAsUnitTest(Resource dartFile, Project project,
-    [ List<String> testArgs ]) {
-  if (testArgs == null) {
-    testArgs = <String>[];
-  }
-  var response = new ReceivePort();
-  Future<Isolate> remote = Isolate.spawnUri(Uri.parse(dartFile.fullName),
-    testArgs, response.sendPort);
-
-  return remote;
-}
 
 
 class UnitTests extends BuildTool {
   final FailureMode onFailure;
-  final Resource summaryFile;
+  final ResourceListable summaryDir;
   final List<String> testArgs;
+  final TestResultWriter resultWriter;
+
 
 
   factory UnitTests(String name,
       { String description: "", String phase: PHASE_BUILD,
-      ResourceCollection testFiles: null, Resource summaryFile,
+      ResourceCollection testFiles: null, ResourceListable summaryDir: null,
       List<String> depends: null, List<String> testArgs: null,
-      FailureMode onFailure: null }) {
+      FailureMode onFailure: null, TestResultWriter resultWriter }) {
     if (depends == null) {
       depends = <String>[];
     }
 
-    var pipe = new Pipe.list(testFiles.entries(), <Resource>[ summaryFile ]);
+    if (resultWriter == null) {
+      resultWriter = JSON_TEST_RESULT_WRITER;
+    }
+    if (testArgs == null) {
+      testArgs = <String>[];
+    }
+
+    var resultMap = <Resource, List<Resource>>{};
+    testFiles.entries().forEach((Resource f) {
+      resultMap[f] = <Resource>[summaryDir.child("result-" + f.name + ".json")];
+    });
+
+    var pipe = new Pipe.direct(resultMap);
     var targetDef = BuildTool
       .mkTargetDef(name, description, phase, pipe, depends, <String>[]);
-    return new UnitTests._(name, targetDef, phase, pipe, summaryFile,
-      testArgs, onFailure);
+    return new UnitTests._(name, targetDef, phase, pipe, summaryDir,
+      testArgs, onFailure, resultWriter);
   }
 
 
   UnitTests._(String name, target targetDef, String phase, Pipe pipe,
-    Resource summaryFile, List<String> testArgs, FailureMode onFailure) :
-    this.summaryFile = summaryFile, this.onFailure = onFailure,
-    this.testArgs = testArgs,
+    ResourceListable summaryDir, List<String> testArgs, FailureMode onFailure,
+    TestResultWriter resultWriter) :
+    this.summaryDir = summaryDir, this.onFailure = onFailure,
+    this.testArgs = testArgs, this.resultWriter = resultWriter,
     super(name, targetDef, phase, pipe);
 
 
@@ -352,56 +361,63 @@ class UnitTests extends BuildTool {
       project.logger.info("nothing to do");
       return new Future<Project>.sync(() => project);
     }
+    print("tests: " + inp.toString());
 
     var hadErrors = false;
-    StreamController<LogMessage> jointMsg = new StreamController<LogMessage>.
-        broadcast(sync: true);
-    jointMsg.stream.listen((LogMessage msg) {
-      if (msg.level.startsWith("err")) {
-        hadErrors = true;
-      }
-      project.logger.message(msg);
-    });
-    writeSummaryFile(jointMsg.stream);
     Future runner = null;
     for (Resource r in inp) {
       Future next(_) {
-        return runSingleTest(project, r, jointMsg);
+        print("run test " + r.fullName);
+        return runSingleTest(project, r);
       }
       if (runner == null) {
-        runner = new Future.sync(() => next);
+        runner = next(project);
       } else {
         runner = runner.then((_) => next);
       }
     }
-    return Future.wait([ jointMsg.done, runner ])
+
+    return runner
         .then((_) {
-          messages.close();
           if (hadErrors) {
             handleFailure(project,
               mode: onFailure,
               failureMessage: "one or more tests had errors");
           }
           return new Future<Project>.sync(() => project);
-        })
-        .then((_) => new Future<Project>.sync(project));
-  }
-
-  Future runSingleTest(Project proj, Resource test,
-      StreamController<LogMessage> controller) {
-    var testMsgs = runAsUnitTest(test, proj, testArgs);
-    controller.pipe(testMsgs);
-    return testMsgs.done;
+        });
   }
 
 
-  void writeSummaryFile(Stream<LogMessage> msg) {
-    msg.listen(
-        (logMessage) {
-
-        }, onDone: () {
-
-        }
-      );
+  Future runSingleTest(Project proj, Resource test) {
+    var response = new ReceivePort();
+    var remote = Isolate.spawnUri(Uri.parse(test.fullName),
+      testArgs, response.sendPort).then((_) => response.close());
+    var fut = resultWriter(summaryDir, test, response);
+    if (fut != null) {
+      remote = Future.wait([remote, fut]);
+    }
+    return remote;
   }
+
 }
+
+final TestResultWriter JSON_TEST_RESULT_WRITER =
+    (DirectoryResource basedir, Resource testFile,
+    Stream<LogMessage> messages) {
+  List<Map> vals = [];
+  Resource outfile = basedir.child("testresult-" + testFile.name + ".json");
+  Completer completer = new Completer.sync();
+  messages.listen(
+    (LogMessage msg) {
+      vals.add(msg.toJson());
+    },
+    onDone: () {
+      outfile.writeAsString(JSON.encode(vals));
+      completer.complete();
+    }
+  );
+  return completer.future;
+};
+
+

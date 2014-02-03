@@ -115,7 +115,7 @@ abstract class Resource<T extends ResourceListable> {
    * [#writable] is `false`, then this will throw an [Exception].
    */
   // default implementation
-  void writeBytes(List<int> data) {
+  void writeAsBytes(List<int> data) {
     throw new Exception("writeAsBytes not supported on " + name);
   }
 
@@ -125,7 +125,7 @@ abstract class Resource<T extends ResourceListable> {
    * If [#writable] is `false`, then this will throw an [Exception].
    */
   // default implementation
-  void writeString(String data, { Encoding encoding: null }) {
+  void writeAsString(String data, { Encoding encoding: null }) {
     throw new Exception("writeAsString not supported on " + name);
   }
 
@@ -358,6 +358,7 @@ class ListableResourceCollection extends AbstractResourceCollection {
 
 class DeepListableResourceCollection extends ListableResourceCollection {
   ResourceTest recurseTest;
+  bool addDirectories;
   
   
   factory DeepListableResourceCollection.files(ResourceListable res,
@@ -378,8 +379,8 @@ class DeepListableResourceCollection extends ListableResourceCollection {
    * [ResourceListable] should have its contents examined.
    */
   DeepListableResourceCollection(ResourceListable res, [ ResourceTest resourceTest,
-    ResourceTest recurseTest ]) :
-    this.recurseTest = recurseTest,
+    ResourceTest recurseTest, bool addDirectories = false ]) :
+    this.recurseTest = recurseTest, this.addDirectories = addDirectories,
     super(res, resourceTest);
   
 
@@ -406,6 +407,9 @@ class DeepListableResourceCollection extends ListableResourceCollection {
         //print("    <="+child.name);
         ret.add(child);
       }
+    }
+    if (addDirectories) {
+      ret.add(listable);
     }
   }
   
@@ -554,15 +558,21 @@ class FileResource extends FileEntityResource<FileSystemEntity> {
     return referencedFile.readAsStringSync(encoding: encoding);
   }
 
-  void writeBytes(List<int> data) {
+  void writeAsBytes(List<int> data) {
+    if (! referencedFile.parent.existsSync()) {
+      referencedFile.parent.createSync(true);
+    }
     referencedFile.writeAsBytesSync(data);
   }
 
-  void writeString(String data, { Encoding encoding: null }) {
+  void writeAsString(String data, { Encoding encoding: null }) {
     if (encoding == null) {
       encoding = SYSTEM_ENCODING;
     }
-    referencedFile.writeAsStringSync(data, encoding: encoding);
+    if (! referencedFile.parent.existsSync()) {
+      referencedFile.parent.createSync(recursive: true);
+    }
+    referencedFile.writeAsStringSync(data, encoding: encoding, flush: true);
   }
 }
 
