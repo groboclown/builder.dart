@@ -30,6 +30,7 @@ library builder.resource;
 import 'dart:io';
 import 'dart:collection';
 import 'dart:convert';
+import 'dart:async';
 
 import 'src/exceptions.dart';
 
@@ -79,8 +80,8 @@ abstract class Resource<T extends ResourceListable> {
    * Attempt to delete this [Resource].  Set [recursive] to `true` to attempt
    * to delete this resource and its children.
    *
-   * Returns `true` if this [Resource] could not be removed.  In the case of
-   * [recursive] `true`, a `false` return result may indicate a partial failure,
+   * Returns `true` if this [Resource] was removed.  In the case of
+   * [recursive] = `true`, a `false` return result may indicate a partial failure,
    * where potentially some or all of the children may have been deleted, but
    * this instance still remains.
    */
@@ -126,6 +127,25 @@ abstract class Resource<T extends ResourceListable> {
   // default implementation
   void writeString(String data, { Encoding encoding: null }) {
     throw new Exception("writeAsString not supported on " + name);
+  }
+
+
+  /**
+   * Opens the [Resource] for asynchronous access.  Users of this method
+   * must follow the conventions of [RandomAccessFile], and implementations
+   * of [Resource] that provide this method must implement the
+   * [RandomAccessFile] API.  Note that [RandomAccessFile.setPosition(int)]
+   * may throw an exception if the position is after the current position
+   * (no going backwards).
+   *
+   * If the [mode] is `READ` or `APPEND`, and the [readable] property returns
+   * `false`, then this will throw an [Exception].  Likeise, if the mode is
+   * `WRITE` or `APPEND`, and the [writable] property returns `false`, then this
+   * will throw an [Exception].
+   */
+  // default implementation
+  Future<RandomAccessFile> open(FileMode mode) {
+    throw new Exception("open not supported on " + name);
   }
 
 

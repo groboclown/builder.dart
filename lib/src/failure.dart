@@ -85,6 +85,14 @@ final FailureMode WARN_ON_FAILURE = (Failure failure) {
   }
 };
 
+FailureMode SET_PROPERTY_ON_FAILURE(String propertyName,
+    [ String value = "true" ]) {
+  FailureMode ret = (Failure failure) {
+    failure.project.setProperty(propertyName, value);
+  };
+  return ret;
+}
+
 final FailureMode STOP_ON_FAILURE = (Failure failure) {
   if (failure == null) {
     throw new Exception("failure is null");

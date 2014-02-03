@@ -29,7 +29,10 @@ library builder.std;
  */
 
 import 'resource.dart';
+import 'tool.dart';
+
 import 'dart:io';
+import 'dart:async';
 
 final DirectoryResource ROOTDIR = new DirectoryResource(Directory.current);
 
@@ -78,3 +81,126 @@ final ResourceCollection DART_FILES = new ResourceSet.from([
     BENCHMARK_FILES, BIN_FILES, DOC_FILES, EXAMPLE_FILES, LIB_FILES,
     TEST_FILES, TOOL_FILES
 ]);
+
+
+
+
+// ---------------------------------------------------------------------------
+// Standard Targets
+
+
+
+
+class Delete extends BuildTool {
+  final ResourceCollection _files;
+  final FailureMode onFailure;
+
+  factory Delete(String name,
+      { String description: "", String phase: PHASE_CLEAN,
+      ResourceCollection files: null, List<String> depends: null,
+      FailureMode onFailure: null }) {
+    if (depends == null) {
+      depends = <String>[];
+    }
+
+    // Because this is a Clean, this does not really take files as input.
+    var pipe = new Pipe.list(null, null);
+    var targetDef = BuildTool
+      .mkTargetDef(name, description, phase, pipe, depends, <String>[]);
+    return new Delete._(name, targetDef, phase, pipe, files, onFailure);
+
+  }
+
+
+  Delete._(String name, target targetDef, String phase, Pipe pipe,
+      ResourceCollection files, FailureMode onFailure) :
+      this._files = files, this.onFailure = onFailure,
+      super(name, targetDef, phase, pipe);
+
+
+  @override
+  Future<Project> start(Project project) {
+    var inp = _files.entries();
+    if (inp.isEmpty) {
+      project.logger.info("nothing to do");
+      return new Future<Project>.sync(() => project);
+    }
+
+    return new Future<Project>.sync(() {
+      var problems = <Resource>[];
+      for (Resource r in inp) {
+        if (r.exists) {
+          if (! r.delete(false)) {
+            problems.add(r);
+          }
+        }
+      }
+      if (problems.isNotEmpty) {
+        handleFailure(project,
+          mode: onFailure,
+          failureMessage: "could not remove the following files: " +
+            problems.toString());
+      }
+      return new Future<Project>.sync(() => project);
+    });
+  }
+}
+
+/* This should be automatically done.
+
+class MkDir extends BuildTool {
+  final FailureMode onFailure;
+
+  factory MkDir(String name,
+                 { String description: "", String phase: PHASE_BUILD,
+                 Resource file: null, List<String> depends: null,
+                 FailureMode onFailure: null }) {
+    if (depends == null) {
+      depends = <String>[];
+    }
+
+    // This generates a resource without any input
+    var pipe = new Pipe.list(null, <Resource>[ file ]);
+    var targetDef = BuildTool
+      .mkTargetDef(name, description, phase, pipe, depends, <String>[]);
+    return new MkDir._(name, targetDef, phase, pipe, onFailure);
+  }
+
+
+  MkDir._(String name, target targetDef, String phase, Pipe pipe,
+           FailureMode onFailure) :
+    this.onFailure = onFailure,
+    super(name, targetDef, phase, pipe);
+
+
+  @override
+  Future<Project> start(Project project) {
+    var out = pipe.output;
+    if (out.isEmpty) {
+      project.logger.info("nothing to do");
+      return new Future<Project>.sync(() => project);
+    }
+
+    return new Future<Project>.sync(() {
+      var problems = <Resource>[];
+      for (Resource r in inp) {
+        if (! r.exists) {
+          if (! r.delete(false)) {
+            problems.add(r);
+          }
+        } else if (! (r is ResourceListable)) {
+          problems.add(r);
+        }
+      }
+      if (problems.isNotEmpty) {
+        handleFailure(project,
+        mode: onFailure,
+        failureMessage: "could not remove the following files: " +
+        problems.toString());
+      }
+      return new Future<Project>.sync(() => project);
+    });
+  }
+}
+
+*/

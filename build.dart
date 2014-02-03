@@ -32,6 +32,11 @@ import 'package:builder/dart.dart';
 // The standard package layout definitions
 import 'package:builder/std.dart';
 
+final DirectoryResource OUTPUT_DIR = filenameAsDir(ROOTDIR, ".work");
+
+final UNIT_TEST_SUMMARY_FILE = filenameToResource(".work/unit_test_summary.json");
+
+
 
 // --------------------------------------------------------------------
 // Targets
@@ -39,6 +44,17 @@ import 'package:builder/std.dart';
 final dartAnalyzer = new DartAnalyzer("lint",
     description: "Check the Dart files for language issues",
     dartFiles: DART_FILES);
+
+
+final cleanOutput = new Delete("clean-output",
+    description: "Clean the generated files",
+    files: new DeepListableResourceCollection(OUTPUT_DIR, null, null));
+
+
+final unitTests = new UnitTests("test",
+    description: "Run unit tests and generate summary report",
+    testFiles: TEST_FILES,
+    summaryFile: UNIT_TEST_SUMMARY_FILE);
 
 
 void main(List<String> args) {

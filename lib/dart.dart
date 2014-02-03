@@ -190,12 +190,6 @@ class DartAnalyzer extends BuildTool {
       }
     }
     ret = ret.then((_) {
-      if (project == null) {
-        throw new Exception("project is null");
-      }
-      if (project.activeTarget == null) {
-        throw new Exception("project.activeTarget is null");
-      }
       messages.close();
       if (hadErrors) {
         handleFailure(project,
@@ -305,7 +299,7 @@ StreamTransformer<String, List<String>> createCsvTransformer(
 
 
 
-Future runAsUnitTest(Resource dartFile, Project project,
+Stream<LogMessage> runAsUnitTest(Resource dartFile, Project project,
     [ List<String> testArgs ]) {
   if (testArgs == null) {
     testArgs = <String>[];
@@ -314,12 +308,100 @@ Future runAsUnitTest(Resource dartFile, Project project,
   Future<Isolate> remote = Isolate.spawnUri(Uri.parse(dartFile.fullName),
     testArgs, response.sendPort);
 
-
-  // FIXME
-
-  return remote.then((p) => response.forEach((msg) {
-      project.logger.message(msg);
-    }));
+  return remote;
 }
 
 
+class UnitTests extends BuildTool {
+  final FailureMode onFailure;
+  final Resource summaryFile;
+  final List<String> testArgs;
+
+
+  factory UnitTests(String name,
+      { String description: "", String phase: PHASE_BUILD,
+      ResourceCollection testFiles: null, Resource summaryFile,
+      List<String> depends: null, List<String> testArgs: null,
+      FailureMode onFailure: null }) {
+    if (depends == null) {
+      depends = <String>[];
+    }
+
+    var pipe = new Pipe.list(testFiles.entries(), <Resource>[ summaryFile ]);
+    var targetDef = BuildTool
+      .mkTargetDef(name, description, phase, pipe, depends, <String>[]);
+    return new UnitTests._(name, targetDef, phase, pipe, summaryFile,
+      testArgs, onFailure);
+  }
+
+
+  UnitTests._(String name, target targetDef, String phase, Pipe pipe,
+    Resource summaryFile, List<String> testArgs, FailureMode onFailure) :
+    this.summaryFile = summaryFile, this.onFailure = onFailure,
+    this.testArgs = testArgs,
+    super(name, targetDef, phase, pipe);
+
+
+
+
+  @override
+  Future<Project> start(Project project) {
+    var inp = new List<Resource>.from(pipe.requiredInput);
+    inp.addAll(pipe.optionalInput);
+    if (inp.isEmpty) {
+      project.logger.info("nothing to do");
+      return new Future<Project>.sync(() => project);
+    }
+
+    var hadErrors = false;
+    StreamController<LogMessage> jointMsg = new StreamController<LogMessage>.
+        broadcast(sync: true);
+    jointMsg.stream.listen((LogMessage msg) {
+      if (msg.level.startsWith("err")) {
+        hadErrors = true;
+      }
+      project.logger.message(msg);
+    });
+    writeSummaryFile(jointMsg.stream);
+    Future runner = null;
+    for (Resource r in inp) {
+      Future next(_) {
+        return runSingleTest(project, r, jointMsg);
+      }
+      if (runner == null) {
+        runner = new Future.sync(() => next);
+      } else {
+        runner = runner.then((_) => next);
+      }
+    }
+    return Future.wait([ jointMsg.done, runner ])
+        .then((_) {
+          messages.close();
+          if (hadErrors) {
+            handleFailure(project,
+              mode: onFailure,
+              failureMessage: "one or more tests had errors");
+          }
+          return new Future<Project>.sync(() => project);
+        })
+        .then((_) => new Future<Project>.sync(project));
+  }
+
+  Future runSingleTest(Project proj, Resource test,
+      StreamController<LogMessage> controller) {
+    var testMsgs = runAsUnitTest(test, proj, testArgs);
+    controller.pipe(testMsgs);
+    return testMsgs.done;
+  }
+
+
+  void writeSummaryFile(Stream<LogMessage> msg) {
+    msg.listen(
+        (logMessage) {
+
+        }, onDone: () {
+
+        }
+      );
+  }
+}
