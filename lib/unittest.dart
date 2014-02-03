@@ -89,10 +89,10 @@ class BuilderConfiguration extends SimpleConfiguration {
 
   @override
   void onTestResult(TestCase testCase) {
+    print("onTestResult " + testCase.description);
     super.onTestResult(testCase);
 
     // FIXME send log message
-    print("onTestResult " + testCase.description);
   }
 
   /**
@@ -102,10 +102,10 @@ class BuilderConfiguration extends SimpleConfiguration {
    */
   @override
   void onTestResultChanged(TestCase testCase) {
+    print("onTestResultChanged " + testCase.description);
     super.onTestResultChanged(testCase);
 
     // FIXME send log message
-    print("onTestResultChanged " + testCase.description);
   }
 
   /**
@@ -123,9 +123,9 @@ class BuilderConfiguration extends SimpleConfiguration {
    */
   @override
   void onDone(bool success) {
+    print("onDone " + success);
     super.onDone(success);
 
-    print("onDone " + success);
     // FIXME send log message
     // FIXME close port
   }

@@ -301,8 +301,8 @@ StreamTransformer<String, List<String>> createCsvTransformer(
 /**
  * Outputs messages to test result files.
  */
-typedef Future TestResultWriter(DirectoryResource basedir, Resource testFile,
-    Stream<LogMessage> messages);
+typedef Future TestResultWriter(Project project, DirectoryResource basedir,
+    Resource testFile, Stream<LogMessage> messages);
 
 
 
@@ -367,13 +367,13 @@ class UnitTests extends BuildTool {
     Future runner = null;
     for (Resource r in inp) {
       Future next(_) {
-        print("run test " + r.fullName);
+        project.logger.info("Running test file " + r.name);
         return runSingleTest(project, r);
       }
       if (runner == null) {
         runner = next(project);
       } else {
-        runner = runner.then((_) => next);
+        runner = runner.then(next);
       }
     }
 
@@ -393,7 +393,7 @@ class UnitTests extends BuildTool {
     var response = new ReceivePort();
     var remote = Isolate.spawnUri(Uri.parse(test.fullName),
       testArgs, response.sendPort).then((_) => response.close());
-    var fut = resultWriter(summaryDir, test, response);
+    var fut = resultWriter(proj, summaryDir, test, response);
     if (fut != null) {
       remote = Future.wait([remote, fut]);
     }
@@ -403,13 +403,14 @@ class UnitTests extends BuildTool {
 }
 
 final TestResultWriter JSON_TEST_RESULT_WRITER =
-    (DirectoryResource basedir, Resource testFile,
+    (Project project, DirectoryResource basedir, Resource testFile,
     Stream<LogMessage> messages) {
   List<Map> vals = [];
   Resource outfile = basedir.child("testresult-" + testFile.name + ".json");
   Completer completer = new Completer.sync();
   messages.listen(
     (LogMessage msg) {
+      project.logger.message(msg);
       vals.add(msg.toJson());
     },
     onDone: () {
