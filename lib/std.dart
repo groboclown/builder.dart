@@ -34,47 +34,45 @@ import 'tool.dart';
 import 'dart:io';
 import 'dart:async';
 
-final DirectoryResource ROOTDIR = new DirectoryResource(Directory.current);
-
 ResourceTest DART_FILE_FILTER = (r) =>
   (r.exists && DEFAULT_IGNORE_TEST(r) && r.name.toLowerCase().endsWith(".dart"));
 
 
-final DirectoryResource ASSET_DIR = filenameAsDir(ROOTDIR, "asset");
-final ResourceCollection ASSET_FILES = new DeepListableResourceCollection(
-    ASSET_DIR, DEFAULT_IGNORE_TEST, DEFAULT_IGNORE_TEST);
+final DirectoryResource ASSET_DIR = new FileEntityResource.asDir("asset");
+final ResourceCollection ASSET_FILES = ASSET_DIR.asCollection(
+    resourceTest: DEFAULT_IGNORE_TEST, recurseTest: DEFAULT_IGNORE_TEST);
 
-final DirectoryResource BENCHMARK_DIR = filenameAsDir(ROOTDIR, "benchmark");
-final ResourceCollection BENCHMARK_FILES = new DeepListableResourceCollection(
-    BENCHMARK_DIR, DART_FILE_FILTER, SOURCE_RECURSION_TEST);
+final DirectoryResource BENCHMARK_DIR = new FileEntityResource.asDir("benchmark");
+final ResourceCollection BENCHMARK_FILES = BENCHMARK_DIR.asCollection(
+    resourceTest: DART_FILE_FILTER, recurseTest: SOURCE_RECURSION_TEST);
 
-final DirectoryResource BIN_DIR = filenameAsDir(ROOTDIR, "bin");
-final ResourceCollection BIN_FILES = new DeepListableResourceCollection(
-    BIN_DIR, DEFAULT_IGNORE_TEST, SOURCE_RECURSION_TEST);
+final DirectoryResource BIN_DIR = new FileEntityResource.asDir("bin");
+final ResourceCollection BIN_FILES = BIN_DIR.asCollection(
+    resourceTest: DEFAULT_IGNORE_TEST, recurseTest: SOURCE_RECURSION_TEST);
 
-final DirectoryResource DOC_DIR = filenameAsDir(ROOTDIR, "doc");
-final ResourceCollection DOC_FILES = new DeepListableResourceCollection(
-    BIN_DIR, DEFAULT_IGNORE_TEST, DEFAULT_IGNORE_TEST);
+final DirectoryResource DOC_DIR = new FileEntityResource.asDir("doc");
+final ResourceCollection DOC_FILES = BIN_DIR.asCollection(
+    resourceTest: DEFAULT_IGNORE_TEST, recurseTest: DEFAULT_IGNORE_TEST);
 
-final DirectoryResource EXAMPLE_DIR = filenameAsDir(ROOTDIR, "example");
-final ResourceCollection EXAMPLE_FILES = new DeepListableResourceCollection(
-    EXAMPLE_DIR, DEFAULT_IGNORE_TEST, SOURCE_RECURSION_TEST);
+final DirectoryResource EXAMPLE_DIR = new FileEntityResource.asDir("example");
+final ResourceCollection EXAMPLE_FILES = EXAMPLE_DIR.asCollection(
+    resourceTest: DEFAULT_IGNORE_TEST, recurseTest: SOURCE_RECURSION_TEST);
 
-final DirectoryResource LIB_DIR = filenameAsDir(ROOTDIR, "lib");
-final ResourceCollection LIB_FILES = new DeepListableResourceCollection(
-    LIB_DIR, DART_FILE_FILTER, SOURCE_RECURSION_TEST);
+final DirectoryResource LIB_DIR = new FileEntityResource.asDir("lib");
+final ResourceCollection LIB_FILES = LIB_DIR.asCollection(
+    resourceTest: DART_FILE_FILTER, recurseTest: SOURCE_RECURSION_TEST);
 
-final DirectoryResource TEST_DIR = filenameAsDir(ROOTDIR, "test");
-final ResourceCollection TEST_FILES = new DeepListableResourceCollection(
-    TEST_DIR, DART_FILE_FILTER, SOURCE_RECURSION_TEST);
+final DirectoryResource TEST_DIR = new FileEntityResource.asDir("test");
+final ResourceCollection TEST_FILES = TEST_DIR.asCollection(
+    resourceTest: DART_FILE_FILTER, recurseTest: SOURCE_RECURSION_TEST);
 
-final DirectoryResource TOOL_DIR = filenameAsDir(ROOTDIR, "tool");
-final ResourceCollection TOOL_FILES = new DeepListableResourceCollection(
-    EXAMPLE_DIR, DEFAULT_IGNORE_TEST, SOURCE_RECURSION_TEST);
+final DirectoryResource TOOL_DIR = new FileEntityResource.asDir("tool");
+final ResourceCollection TOOL_FILES = TOOL_DIR.asCollection(
+    resourceTest: DEFAULT_IGNORE_TEST, recurseTest: SOURCE_RECURSION_TEST);
 
-final DirectoryResource WEB_DIR = filenameAsDir(ROOTDIR, "web");
-final ResourceCollection WEB_FILES = new DeepListableResourceCollection(
-    WEB_DIR, DEFAULT_IGNORE_TEST, DEFAULT_IGNORE_TEST);
+final DirectoryResource WEB_DIR = new FileEntityResource.asDir("web");
+final ResourceCollection WEB_FILES = WEB_DIR.asCollection(
+    resourceTest: DEFAULT_IGNORE_TEST, recurseTest: DEFAULT_IGNORE_TEST);
 
 
 final ResourceCollection DART_FILES = new ResourceSet.from([
@@ -146,21 +144,24 @@ class Delete extends BuildTool {
   }
 }
 
-/* This should be automatically done.
 
+/**
+ * For the most part, this is automatically performed.  However, there are some
+ * circumstances where the build requires the creation of an empty directory.
+ */
 class MkDir extends BuildTool {
   final FailureMode onFailure;
 
   factory MkDir(String name,
                  { String description: "", String phase: PHASE_BUILD,
-                 Resource file: null, List<String> depends: null,
+                 Resource dir: null, List<String> depends: null,
                  FailureMode onFailure: null }) {
     if (depends == null) {
       depends = <String>[];
     }
 
     // This generates a resource without any input
-    var pipe = new Pipe.list(null, <Resource>[ file ]);
+    var pipe = new Pipe.list(null, <Resource>[ dir ]);
     var targetDef = BuildTool
       .mkTargetDef(name, description, phase, pipe, depends, <String>[]);
     return new MkDir._(name, targetDef, phase, pipe, onFailure);
@@ -181,26 +182,36 @@ class MkDir extends BuildTool {
       return new Future<Project>.sync(() => project);
     }
 
-    return new Future<Project>.sync(() {
-      var problems = <Resource>[];
-      for (Resource r in inp) {
-        if (! r.exists) {
-          if (! r.delete(false)) {
-            problems.add(r);
-          }
-        } else if (! (r is ResourceListable)) {
-          problems.add(r);
+    var problems = <Resource>[];
+    Future ret = null;
+    for (Resource r in out) {
+      if (! r.exists && r is DirectoryResource) {
+        if (ret != null) {
+          ret = (r.entity as Directory).create(recursive: true).
+            catchError((error) {
+              problems.add(r);
+            });
+        } else {
+          ret = ret.then((_) => (r.entity as Directory).create(recursive: true).
+            catchError((error) {
+              problems.add(r);
+            }));
         }
       }
+    }
+    if (ret == null) {
+      project.logger.info("nothing to do");
+      return new Future<Project>.sync(() => project);
+    }
+
+    ret.then((_) {
       if (problems.isNotEmpty) {
         handleFailure(project,
-        mode: onFailure,
-        failureMessage: "could not remove the following files: " +
-        problems.toString());
+          mode: onFailure,
+          failureMessage: "could not create the following directories: " +
+            problems.toString());
       }
-      return new Future<Project>.sync(() => project);
+      return project;
     });
   }
 }
-
-*/

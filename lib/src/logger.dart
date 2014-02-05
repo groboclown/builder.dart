@@ -201,7 +201,7 @@ class LogResourceMessage extends LogToolMessage {
   Map<String, dynamic> createParams() {
     var params = super.createParams();
     params.addAll(<String, dynamic>{
-        "file": file.fullName,
+        "file": file.relname,
         "line": line,
         "charStart": charStart,
         "charEnd": charEnd
@@ -233,8 +233,8 @@ class LogMappingMessage extends LogMessage {
     var params = super.createParams();
     params.addAll(<String, dynamic>{
         "tool": tool,
-        "from": from.fullName,
-        "to": to.fullName
+        "from": from.relname,
+        "to": to.relname
     });
     return params;
   }
@@ -279,7 +279,7 @@ class CmdLogger extends AbstractLogger {
         message.message);
     if (message is LogResourceMessage) {
       var rm = message;
-      print("   in " + rm.file.fullName + ", line " + rm.line.toString() +
+      print("   in " + rm.file.relname + ", line " + rm.line.toString() +
         ", col " + (rm.charStart + 1).toString() + "-" +
         (rm.charEnd + 1).toString());
     }

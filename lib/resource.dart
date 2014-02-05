@@ -24,7 +24,9 @@
 library builder.resource;
 
 /**
- * Handles file and other resources used by the build in an abstract way.
+ * Handles file and other resources used by the build in an abstract way.  All
+ * new [Resource] objects use the [GLOBAL_CONTEXT] instance, unless it is
+ * explicitly set at creation time.
  */
 
 import 'dart:io';
@@ -32,9 +34,16 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:async';
 
+import 'package:path/path.dart' as path;
+
 import 'src/exceptions.dart';
 
 bool CASE_SENSITIVE = true;
+
+/**
+ * The default Context used for all new [Resource] objects.
+ */
+path.Context GLOBAL_CONTEXT = new path.Context();
 
 
 /**
@@ -49,9 +58,16 @@ abstract class Resource<T extends ResourceListable> {
   String get name;
 
   /**
-   * The full name of the resource, including parent information.
+   * The name of the resource as passed into the resource, including parent
+   * information, but not including the [path.Context].
    */
-  String get fullName;
+  String get relname;
+
+  /**
+   * The absolute location of the resource, using the [path.Context] information.
+   * This will throw a [NoContextException]
+   */
+  String get absolute;
 
   /**
    * Returns `true` if the [#readAsBytes()] and [#readAsString()] calls are
@@ -75,6 +91,11 @@ abstract class Resource<T extends ResourceListable> {
    * the top-level, then it returns `this`.
    */
   T get parent;
+
+  /**
+   * The [path.Context] for this [Resource].
+   */
+  path.Context get context;
 
   /**
    * Attempt to delete this [Resource].  Set [recursive] to `true` to attempt
@@ -182,12 +203,12 @@ abstract class Resource<T extends ResourceListable> {
     if (t == null) {
       return false;
     }
-    return fullName == t.fullName;
+    return relname == t.relname;
   }
   
   @override
   String toString() {
-    return fullName;
+    return relname;
   }
 }
 
@@ -427,14 +448,147 @@ abstract class FileEntityResource<T extends FileSystemEntity>
     extends Resource<DirectoryResource> {
 
   final T entity;
+  final String _relname;
+  final path.Context _context;
 
-  FileEntityResource(this.entity);
+  FileEntityResource.inner(this.entity, this._context, this._relname);
+
+
+  factory FileEntityResource.fromEntity(FileSystemEntity res,
+      { path.Context context: null }) {
+    if (context == null) {
+      context = GLOBAL_CONTEXT;
+    }
+    var relname = context.relative(res.path);
+    var notFoundHint = (res is Directory ? 'dir' :
+      res is Link ? null : 'file' );
+    return new FileEntityResource(relname, context: context,
+      notFoundHint: notFoundHint);
+  }
+
+
+  factory FileEntityResource.asDir(String relname,
+      { path.Context context: null }) {
+    return new FileEntityResource(relname, context: context,
+        notFoundHint: 'dir');
+  }
+
+
+  factory FileEntityResource.asFile(String relname,
+      { path.Context context: null }) {
+    return new FileEntityResource(relname, context: context,
+    notFoundHint: 'file');
+  }
+
+
+
+
+
+  /**
+   *
+   * [notFoundHint] is used if the file entry does not currently exist.
+   * It can be `dir` or `file` or `null`.  If `null`, then the constructor
+   * checks if the [relname] ends with a separator character (`/` or `\`)
+   * to determine if it should be considered a directory or file.
+   */
+  factory FileEntityResource(String relname,
+      { path.Context context: null, String notFoundHint: null }) {
+    if (context == null) {
+      context = GLOBAL_CONTEXT;
+    }
+    if (context.style == path.Style.url) {
+      throw new BuildSetupException("invalid context style for File: " +
+        context.style.toString());
+    }
+    var link = null;
+    var fullname = context.absolute(relname);
+    // FIXME DEBUG
+    //print("relname: [" + relname.toString() + "]; fullname: [" + fullname + "]");
+    var stat;
+    try {
+      stat = FileStat.statSync(fullname);
+    } catch (e, s) {
+      // This is a work-around for http://code.google.com/p/dart/issues/detail?id=16558
+      // FIXME DEBUG
+      //print(e.toString());
+      //print(s.toString());
+    }
+    if (stat != null && stat.type == FileSystemEntityType.LINK) {
+      try {
+        link = new Link(fullname);
+        stat = FileStat.statSync(link.resolveSymbolicLinksSync());
+      } on FileSystemException catch(e) {
+        // link does not point to a real file
+        stat = null;
+      }
+    }
+    if (stat == null || stat.type == null ||
+        stat.type == FileSystemEntityType.NOT_FOUND) {
+      if (notFoundHint == 'dir') {
+        if (link != null) {
+          return new DirectoryResource.fromLink(link, context, relname);
+        } else {
+          return new DirectoryResource(new Directory(fullname),
+            context, relname);
+        }
+      } else if (notFoundHint == 'file') {
+        if (link != null) {
+          return new FileResource.fromLink(link, context, relname);
+        } else {
+          return new FileResource(new File(fullname),
+            context, relname);
+        }
+      } else if (relname.endsWith('/') || relname.endsWith('\\') ||
+          relname.endsWith(context.separator)) {
+        if (link != null) {
+          return new DirectoryResource.fromLink(link, context, relname);
+        } else {
+          return new DirectoryResource(new Directory(fullname),
+            context, relname);
+        }
+      } else {
+        if (link != null) {
+          return new FileResource.fromLink(link, context, relname);
+        } else {
+          return new FileResource(new File(fullname),
+            context, relname);
+        }
+      }
+    } else if (stat.type == FileSystemEntityType.DIRECTORY) {
+      if (link != null) {
+        return new DirectoryResource.fromLink(link, context, relname);
+      } else {
+        return new DirectoryResource(new Directory(fullname),
+          context, relname);
+      }
+    } else if (stat.type == FileSystemEntityType.FILE) {
+      if (link != null) {
+        return new FileResource.fromLink(link, context, relname);
+      } else {
+        return new FileResource(new File(fullname),
+          context, relname);
+      }
+    } else {
+      throw new BuildSetupException("unknown stat type '" +
+        stat.type.toString() + "' for '" + relname + "'");
+    }
+  }
+
+
+
+
 
   @override
-  String get name => _filenameOf(entity.absolute);
+  String get name => context.basename(relname);
 
   @override
-  String get fullName => entity.absolute.path;
+  String get relname => _relname;
+
+  @override
+  String get absolute => _context.absolute(relname);
+
+  @override
+  path.Context get context => _context;
 
   @override
   bool get readable {
@@ -459,13 +613,23 @@ abstract class FileEntityResource<T extends FileSystemEntity>
   }
 
   @override
-  bool get exists => entity.existsSync();
+  // This looks related to Dart issue 16558
+  //bool get exists => entity.existsSync();
+  bool get exists {
+    try {
+      return entity.existsSync();
+    } catch (e) {
+      return false;
+    }
+  }
+
 
   @override
   bool get isLink => entity is Link;
 
   @override
-  DirectoryResource get parent => new DirectoryResource(entity.parent);
+  DirectoryResource get parent =>
+      new FileEntityResource.fromEntity(entity.parent);
 
   @override
   bool delete(bool recursive) {
@@ -477,16 +641,6 @@ abstract class FileEntityResource<T extends FileSystemEntity>
     }
   }
 
-  
-  String _filenameOf(FileSystemEntity f) {
-      var path = f.path;
-      var match = new RegExp(r'[/\\]([^/\\]+)$').firstMatch(path);
-      if (match == null || match.group(1) == null) {
-        return path;
-      }
-      return match.group(1);
-  }
-  
 }
 
 
@@ -495,13 +649,13 @@ class DirectoryResource extends FileEntityResource<FileSystemEntity>
     implements ResourceListable<FileEntityResource> {
   final Directory referencedDirectory;
 
-  DirectoryResource(Directory dir) :
+  DirectoryResource(Directory dir, path.Context context, String relname) :
     referencedDirectory = dir,
-    super(dir);
+    super.inner(dir, context, relname);
 
-  DirectoryResource.fromLink(Link link) :
+  DirectoryResource.fromLink(Link link, path.Context context, String relname) :
     referencedDirectory = new Directory(link.resolveSymbolicLinksSync()),
-    super(link);
+    super.inner(link, context, relname);
 
   @override
   bool get isDirectory => true;
@@ -513,12 +667,14 @@ class DirectoryResource extends FileEntityResource<FileSystemEntity>
     }
     return new List<FileEntityResource>.from(
         referencedDirectory.listSync(recursive: false, followLinks: true)
-            .map((f) => fileSystemEntityToResource(f)));
+            .map((f) => new FileEntityResource.fromEntity(f,
+                context: this.context)));
   }
 
   @override
-  FileEntityResource child(String name) {
-    return filenameToResource(fullName + '/' + name);
+  FileEntityResource child(String name, [ String notFoundHint ]) {
+    return new FileEntityResource(relname + context.separator + name,
+      context: this.context, notFoundHint: notFoundHint);
   }
 
   @override
@@ -529,6 +685,14 @@ class DirectoryResource extends FileEntityResource<FileSystemEntity>
     return list().any((kid) => kid.contains(r));
   }
 
+
+  ResourceCollection asCollection({ ResourceTest resourceTest,
+      ResourceTest recurseTest, bool addDirectories: false }) {
+    return new DeepListableResourceCollection(this,
+      resourceTest, recurseTest, addDirectories);
+  }
+
+
 }
 
 
@@ -536,13 +700,13 @@ class DirectoryResource extends FileEntityResource<FileSystemEntity>
 class FileResource extends FileEntityResource<FileSystemEntity> {
   final File referencedFile;
 
-  FileResource(File f) :
+  FileResource(File f, path.Context context, String relname) :
     referencedFile = f,
-    super(f);
+    super.inner(f, context, relname);
 
-  FileResource.fromLink(Link link) :
+  FileResource.fromLink(Link link, path.Context context, String relname) :
     referencedFile = new File(link.resolveSymbolicLinksSync()),
-    super(link);
+    super.inner(link, context, relname);
 
   @override
   bool get isDirectory => false;
@@ -560,7 +724,7 @@ class FileResource extends FileEntityResource<FileSystemEntity> {
 
   void writeAsBytes(List<int> data) {
     if (! referencedFile.parent.existsSync()) {
-      referencedFile.parent.createSync(true);
+      referencedFile.parent.createSync(recursive: true);
     }
     referencedFile.writeAsBytesSync(data);
   }
@@ -588,101 +752,11 @@ ResourceCollection filenamesAsCollection(List<String> filenames,
     { bool include(FileEntityResource resource): null }) {
   var resources = <Resource>[];
   for (var name in filenames) {
-    resources.add(filenameToResource(name));
+    var res = new FileEntityResource(name);
+    if (include == null || include(res)) {
+      resources.add(res);
+    }
   }
   return new SimpleResourceCollection(resources);
-}
-
-
-
-FileEntityResource fileSystemEntityToResource(FileSystemEntity f) {
-  if (f == null) {
-    return null;
-  }
-  if (f is Directory) {
-    return new DirectoryResource(f);
-  }
-  if (f is File) {
-    return new FileResource(f);
-  }
-  if (f is Link) {
-    var stripped = f.path.trim();
-    Link link = f;
-    try {
-      String path = link.resolveSymbolicLinksSync();
-      if (FileSystemEntity.isDirectorySync(path)) {
-        return new DirectoryResource.fromLink(link);
-      }
-      return new FileResource.fromLink(link);
-    } on FileSystemException {
-      // File does not exist
-      if (stripped.endsWith('/') || stripped.endsWith('\\')) {
-        return new DirectoryResource.fromLink(link);
-      }
-      return new FileResource.fromLink(link);
-    }
-  }
-  throw new BuildSetupException("unexpected file system object: " +
-    f.toString());
-}
-
-
-
-/**
- * Inspect the file name, and attempt to assign it to a [Resource], as either
- * a [FileResource] or a [DirectoryResource].  If the file does not exist,
- * then it is assumed to be a [FileResource].  If the file is actually a link,
- * it will be inspected to see if it points to a directory or file.
- */
-FileEntityResource filenameToResource(String filename) {
-  if (filename == null) {
-    return null;
-  }
-  var stripped = filename.trim();
-  if (stripped.length <= 0) {
-    return null;
-  }
-  FileSystemEntityType type = FileSystemEntity.typeSync(stripped);
-  if (type == FileSystemEntityType.FILE) {
-    return new FileResource(new File(stripped));
-  }
-  if (type == FileSystemEntityType.DIRECTORY) {
-    return new DirectoryResource(new Directory(stripped));
-  }
-  if (type == FileSystemEntityType.LINK) {
-    Link link = new Link(stripped);
-    try {
-      String path = link.resolveSymbolicLinksSync();
-      if (FileSystemEntity.isDirectorySync(path)) {
-        return new DirectoryResource.fromLink(link);
-      }
-      return new FileResource.fromLink(link);
-    } on FileSystemException {
-      // File does not exist
-      if (stripped.endsWith('/') || stripped.endsWith('\\')) {
-        return new DirectoryResource.fromLink(link);
-      }
-      return new FileResource.fromLink(link);
-    }
-  }
-  if (type == FileSystemEntityType.NOT_FOUND) {
-    if (stripped.endsWith('/') || stripped.endsWith('\\')) {
-      return new DirectoryResource(new Directory(stripped));
-    }
-    return new FileResource(new File(stripped));
-  }
-  throw new BuildSetupException("unexpected file system type: " +
-    type.toString());
-}
-
-
-
-
-DirectoryResource filenameAsDir(DirectoryResource reldir, String name) {
-  var ret = filenameToResource(reldir.fullName + "/" + name + "/");
-  if (! (ret is DirectoryResource)) {
-    throw new BuildSetupException(name + " is not a directory");
-  }
-  return ret;
 }
 

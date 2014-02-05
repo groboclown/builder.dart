@@ -123,7 +123,7 @@ class BuilderConfiguration extends SimpleConfiguration {
    */
   @override
   void onDone(bool success) {
-    print("onDone " + success);
+    print("onDone " + success.toString());
     super.onDone(success);
 
     // FIXME send log message

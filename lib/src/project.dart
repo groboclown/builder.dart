@@ -33,6 +33,14 @@ import 'target.dart';
 import 'exceptions.dart';
 import '../resource.dart';
 
+
+
+/**
+ * The current Project definition for the build.
+ *
+ * TODO use the "path" library, and store a Context object for relative
+ * paths.
+ */
 class Project {
   final AbstractLogger _baseLogger;
   final List<TargetMethod> _targets;

@@ -32,9 +32,9 @@ import 'package:builder/dart.dart';
 // The standard package layout definitions
 import 'package:builder/std.dart';
 
-final DirectoryResource OUTPUT_DIR = filenameAsDir(ROOTDIR, ".work");
+final DirectoryResource OUTPUT_DIR = new FileEntityResource.asDir(".work/");
 final DirectoryResource TEST_SUMMARY_DIR =
-    filenameAsDir(OUTPUT_DIR, "test-results");
+  OUTPUT_DIR.child("test-results/");
 
 
 

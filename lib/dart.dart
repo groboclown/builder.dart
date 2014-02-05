@@ -69,14 +69,14 @@ Future<Project> dartAnalyzer(
   var args = <String>['--machine', '--show-package-warnings'];
   if (packageRoot != null) {
     args.add('--package-root');
-    args.add(packageRoot.fullName);
+    args.add(packageRoot.relname);
   }
-  args.add(dartFile.fullName);
+  args.add(dartFile.relname);
 
-  project.logger.debug("Running [" + exec.fullName + "] with arguments " +
+  project.logger.debug("Running [" + exec.relname + "] with arguments " +
     args.toString());
 
-  return Process.start(exec.fullName, args).then((process) {
+  return Process.start(exec.relname, args).then((process) {
     // add stdout and stderr into a single stream
     process.stderr.transform(createCsvTransformer(uniqueLines))
       .listen((List<String> row) {
@@ -86,7 +86,7 @@ Future<Project> dartAnalyzer(
               tool: "dartanalyzer",
               category: row[1],
               id: row[2],
-              file: new FileResource(new File(row[3])),
+              file: new FileEntityResource.fromEntity(new File(row[3])),
               line: int.parse(row[4]),
               charStart: int.parse(row[5]),
               charEnd: int.parse(row[5]) + int.parse(row[6]),
@@ -391,7 +391,7 @@ class UnitTests extends BuildTool {
 
   Future runSingleTest(Project proj, Resource test) {
     var response = new ReceivePort();
-    var remote = Isolate.spawnUri(Uri.parse(test.fullName),
+    var remote = Isolate.spawnUri(Uri.parse(test.relname),
       testArgs, response.sendPort).then((_) => response.close());
     var fut = resultWriter(proj, summaryDir, test, response);
     if (fut != null) {

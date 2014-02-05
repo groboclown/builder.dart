@@ -23,13 +23,14 @@
 
 /**
  * Adds OS-specific knowledge to the standard Dart objects ([Process] and
- * [Platform])
+ * [Platform]).  FIXME use the "path" library.
  */
 
 library builder.exec;
 
 import 'dart:io';
-import 'dart:async';
+import 'package:path/path.dart' as path;
+
 import 'resource.dart';
 import 'src/exceptions.dart';
 
@@ -45,16 +46,20 @@ final Map<String, List<String>> EXEC_EXT_LIST = <String, List<String>>{
 /**
  *
  */
-Resource resolveExecutable(String name, [ List<String> additionalPath ]) {
+Resource resolveExecutable(String name, [ List<String> additionalPath,
+    path.Context context]) {
+  if (context == null) {
+    context = GLOBAL_CONTEXT;
+  }
   var EXEC_EXT = EXEC_EXT_LIST[Platform.operatingSystem];
   if (EXEC_EXT == null) {
     throw new BuildException("executing not supported on your OS (" +
       Platform.operatingSystem + ")");
   }
-  var path = parseDirectoryPath(Platform.environment['PATH']);
+  var path = parseDirectoryPath(Platform.environment['PATH'], context: context);
   if (additionalPath != null) {
     for (var p in additionalPath) {
-      var r = filenameToResource(p);
+      var r = new FileEntityResource.asDir(p, context: context);
       if (r != null && r.exists && r.isDirectory) {
         path.add(r);
       }
@@ -62,13 +67,14 @@ Resource resolveExecutable(String name, [ List<String> additionalPath ]) {
   }
   
   for (var ext in EXEC_EXT) {
-    var execFile = filenameToResource(name + ext);
+    var execFile = new FileEntityResource.asFile(name + ext, context: context);
     if (execFile != null && execFile.exists && ! execFile.isDirectory) {
       return execFile;
     }
-    if (! name.contains('/') && ! name.contains('\\')) {
+    if (! name.contains('/') && ! name.contains('\\') &&
+        ! name.contains(context.separator)) {
       for (var p in path) {
-        var execFile = filenameToResource(p.fullName + '/' + name + ext);
+        var execFile = p.child(name + ext, "file");
         if (execFile.exists && ! execFile.isDirectory) {
           return execFile;
         }
@@ -86,16 +92,21 @@ Resource resolveExecutable(String name, [ List<String> additionalPath ]) {
  * may not exist.
  */
 List<ResourceListable> parseDirectoryPath(String path,
-    [ bool isDosLike = null, String pathSeparator ]) {
+    { path.Context context: null, String pathSeparator: null }) {
+  if (context == null) {
+    context = GLOBAL_CONTEXT;
+  }
+
   var ret = <ResourceListable>[];
   if (path == null) {
     return ret;
   }
-  if (isDosLike == null) {
-    isDosLike = Platform.isWindows;
+  if (pathSeparator == null) {
+    pathSeparator = Platform.pathSeparator;
   }
+  var isDosLike = (context.style.name == 'windows');
   for (String p in splitPath(path, isDosLike, pathSeparator)) {
-    var f = filenameToResource(p);
+    var f = new FileEntityResource.asDir(p, context: context);
     if (f != null && f is ResourceListable) {
       ret.add(f);
     }
@@ -146,7 +157,7 @@ String _nextPathElement(StringBuffer path, bool isDosLike, String pathSep) {
     path.clear();
     path.write(p);
   }
-  var m = new RegExp("^(.*?)" + pathSep + r"(.*)$").firstMatch(p);
+  var m = new RegExp("^(.*?)\\" + pathSep + r"(.*)$").firstMatch(p);
   if (m != null) {
     ret += m.group(1);
     path.clear();

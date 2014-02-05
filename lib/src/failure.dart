@@ -106,7 +106,7 @@ final FailureMode STOP_ON_FAILURE = (Failure failure) {
   //throw new Exception("don't see anything wrong");
   throw new ToolException(
       failure.project.activeTarget,
-      failure.resource == null ? null : failure.resource.fullName,
+      failure.resource == null ? null : failure.resource.relname,
       failure.line, failure.charStart,
       failure.charEnd, failure.failureMessage);
 };
