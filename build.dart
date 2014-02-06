@@ -48,7 +48,8 @@ final dartAnalyzer = new DartAnalyzer("lint",
 
 final cleanOutput = new Delete("clean-output",
     description: "Clean the generated files",
-    files: new DeepListableResourceCollection(OUTPUT_DIR, null, null, true));
+    files: new DeepListableResourceCollection(OUTPUT_DIR, null, null, true),
+    onFailure: IGNORE_FAILURE);
 
 
 final unitTests = new UnitTests("test",

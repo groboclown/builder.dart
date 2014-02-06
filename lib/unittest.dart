@@ -29,6 +29,8 @@ export 'dart:isolate' show SendPort;
 import 'package:unittest/unittest.dart';
 export 'package:unittest/unittest.dart';
 
+import 'src/logger.dart' as logger;
+
 /**
  * Runs in an isolate while the real build waits.  This communicates with
  * the real build.  Sends [LogMessage] instances back to the spawner.
@@ -61,14 +63,11 @@ export 'package:unittest/unittest.dart';
  */
 
 
-import 'src/logger.dart';
-
-
 class BuilderConfiguration extends SimpleConfiguration {
-  BuilderConfiguration(SendPort replyTo) {
-    print("start builder");
-    // FIXME
+  final SendPort _replyTo;
 
+  BuilderConfiguration(this._replyTo) {
+    print("BuilderConfiguration()");
     throwOnTestFailures = false;
   }
 
@@ -83,8 +82,8 @@ class BuilderConfiguration extends SimpleConfiguration {
   void onTestStart(TestCase testCase) {
     super.onTestStart(testCase);
 
-    // FIXME send log message
     print("onTestStart " + testCase.description);
+    _log(testCase.description, "running");
   }
 
   @override
@@ -92,7 +91,8 @@ class BuilderConfiguration extends SimpleConfiguration {
     print("onTestResult " + testCase.description);
     super.onTestResult(testCase);
 
-    // FIXME send log message
+    _log(testCase.description, "completed");
+
   }
 
   /**
@@ -105,7 +105,7 @@ class BuilderConfiguration extends SimpleConfiguration {
     print("onTestResultChanged " + testCase.description);
     super.onTestResultChanged(testCase);
 
-    // FIXME send log message
+    _log(testCase.description, "updated");
   }
 
   /**
@@ -113,8 +113,8 @@ class BuilderConfiguration extends SimpleConfiguration {
    */
   @override
   void onLogMessage(TestCase testCase, String message) {
-    // FIXME send log message
     print("onLogMessage " + testCase.description + "[" + message + "]");
+    _log(testCase.description, message);
   }
 
   /**
@@ -126,8 +126,8 @@ class BuilderConfiguration extends SimpleConfiguration {
     print("onDone " + success.toString());
     super.onDone(success);
 
-    // FIXME send log message
-    // FIXME close port
+    _log("test-runner", "tests completed");
+    // NOTE no way to explicitly close the port
   }
 
   /**
@@ -140,21 +140,27 @@ class BuilderConfiguration extends SimpleConfiguration {
   @override
   void onSummary(int passed, int failed, int errors, List<TestCase> results,
       String uncaughtError) {
+    print("onSummary(${passed}, ${failed}, ${errors}, ${results}, ${uncaughtError})");
 
-    // FIXME send actual test result message
+    _log("tests completed", passed.toString() +
+      " passed, " + failed.toString() + " failed, " + errors.toString() +
+      "failed", (failed + errors > 0) ? logger.ERROR : logger.INFO);
+    if (uncaughtError != null) {
+      _log("uncaught error", uncaughtError, logger.ERROR);
+    }
 
-    // Things to output (see TestCase):
-    // result.id;
-    // result.description;
-    // result.message;
-    // result.result;
-    // result.passed;
-    // result.stackTrace;
-    // result.currentGroup;
-    // result.startTime;
-    // result.runningTime;
+
+    for (TestCase test in results) {
+      _replyTo.send(new LogUnitTestMessage(test));
+    }
   }
 
+
+
+  void _log(String from, String message, [ String level = logger.INFO ]) {
+    _replyTo.send(new logger.LogToolMessage(level: level, tool: "unittest",
+        category: from, id: from, message: message));
+  }
 }
 
 
@@ -164,4 +170,54 @@ void selectConfiguration(SendPort replyTo, [ void useAlternateConfig() ]) {
   } else if (useAlternateConfig != null) {
     useAlternateConfig();
   }
+}
+
+
+
+/**
+ * A container structure for logging a message about a unit test
+ */
+class LogUnitTestMessage extends logger.LogToolMessage {
+  final int testId;
+  final String testDescription;
+  final String testFailureMessage;
+  final bool testPassed;
+  final String testResult;
+  final StackTrace testFailureTrace;
+  final DateTime testStartTime;
+  final Duration testRunTime;
+  final String testGroup;
+
+
+  LogUnitTestMessage(TestCase testCase) :
+    testId = testCase.id,
+    testDescription = testCase.description,
+    testFailureMessage = testCase.message,
+    testPassed = testCase.passed,
+    testResult = testCase.result,
+    testFailureTrace = testCase.stackTrace,
+    testStartTime = testCase.startTime,
+    testRunTime = testCase.runningTime,
+    testGroup = testCase.currentGroup,
+    super(level: (testCase.passed ? logger.INFO : logger.ERROR),
+        tool: "unittest", category: "test", id: "UNKNOWN",
+        message: testCase.passed ? "passed" : testCase.message);
+
+  @override
+  Map<String, dynamic> createParams() {
+    var params = super.createParams();
+    params.addAll(<String, dynamic>{
+        "id": testId,
+        "description": testDescription,
+        "failureMessage": testFailureMessage,
+        "passed": testPassed,
+        "result": testResult,
+        "failureTrace": testFailureTrace,
+        "startTime": testStartTime,
+        "runingTime": testRunTime,
+        "testGroup": testGroup
+    });
+    return params;
+  }
+
 }

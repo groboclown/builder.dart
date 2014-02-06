@@ -174,7 +174,6 @@ class LogToolMessage extends LogMessage {
     });
     return params;
   }
-
 }
 
 
