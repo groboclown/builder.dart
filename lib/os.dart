@@ -59,9 +59,11 @@ Resource resolveExecutable(String name, [ List<String> additionalPath,
   var path = parseDirectoryPath(Platform.environment['PATH'], context: context);
   if (additionalPath != null) {
     for (var p in additionalPath) {
-      var r = new FileEntityResource.asDir(p, context: context);
-      if (r != null && r.exists && r.isDirectory) {
-        path.add(r);
+      if (p != null) {
+        var r = new FileEntityResource.asDir(p, context: context);
+        if (r != null && r.exists && r.isDirectory) {
+          path.add(r);
+        }
       }
     }
   }

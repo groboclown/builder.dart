@@ -82,13 +82,13 @@ class BuilderConfiguration extends SimpleConfiguration {
   void onTestStart(TestCase testCase) {
     super.onTestStart(testCase);
 
-    print("onTestStart " + testCase.description);
+    //print("onTestStart " + testCase.description);
     _log(testCase.description, "running");
   }
 
   @override
   void onTestResult(TestCase testCase) {
-    print("onTestResult " + testCase.description);
+    //print("onTestResult " + testCase.description);
     super.onTestResult(testCase);
 
     _log(testCase.description, "completed");
@@ -102,7 +102,7 @@ class BuilderConfiguration extends SimpleConfiguration {
    */
   @override
   void onTestResultChanged(TestCase testCase) {
-    print("onTestResultChanged " + testCase.description);
+    //print("onTestResultChanged " + testCase.description);
     super.onTestResultChanged(testCase);
 
     _log(testCase.description, "updated");
@@ -113,7 +113,7 @@ class BuilderConfiguration extends SimpleConfiguration {
    */
   @override
   void onLogMessage(TestCase testCase, String message) {
-    print("onLogMessage " + testCase.description + "[" + message + "]");
+    //print("onLogMessage " + testCase.description + "[" + message + "]");
     _log(testCase.description, message);
   }
 
@@ -123,7 +123,7 @@ class BuilderConfiguration extends SimpleConfiguration {
    */
   @override
   void onDone(bool success) {
-    print("onDone " + success.toString());
+    //print("onDone " + success.toString());
     super.onDone(success);
 
     _log("test-runner", "tests completed");
@@ -151,15 +151,25 @@ class BuilderConfiguration extends SimpleConfiguration {
 
 
     for (TestCase test in results) {
-      _replyTo.send(new LogUnitTestMessage(test));
+      _send(new LogUnitTestMessage(test));
     }
   }
 
 
 
   void _log(String from, String message, [ String level = logger.INFO ]) {
-    _replyTo.send(new logger.LogToolMessage(level: level, tool: "unittest",
+    _send(new logger.LogToolMessage(level: level, tool: "unittest",
         category: from, id: from, message: message));
+  }
+
+  void _send(logger.LogMessage msg) {
+    print("sending " + msg.toJson().toString());
+    try {
+      _replyTo.send(msg);
+    } catch (e, s) {
+      print(e);
+      print(s);
+    }
   }
 }
 

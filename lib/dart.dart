@@ -410,10 +410,12 @@ final TestResultWriter JSON_TEST_RESULT_WRITER =
   Completer completer = new Completer.sync();
   messages.listen(
     (LogMessage msg) {
+      print("received message" + msg.toJson().toString());
       project.logger.message(msg);
       vals.add(msg.toJson());
     },
     onDone: () {
+      print("completed tests for " + testFile.relname);
       outfile.writeAsString(JSON.encode(vals));
       completer.complete();
     }

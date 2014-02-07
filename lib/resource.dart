@@ -493,6 +493,9 @@ abstract class FileEntityResource<T extends FileSystemEntity>
    */
   factory FileEntityResource(String relname,
       { path.Context context: null, String notFoundHint: null }) {
+    if (relname == null) {
+      throw new BuildSetupException("null relname");
+    }
     if (context == null) {
       context = GLOBAL_CONTEXT;
     }

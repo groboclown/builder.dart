@@ -204,7 +204,7 @@ class Project {
     }
     _baseLogger.output(tm, new LogMessage(level: ERROR, message: e.toString()));
     // TODO this should be only printed in debug mode
-    //print(stacktrace.toString());
+    print(stacktrace.toString());
   }
 
 
