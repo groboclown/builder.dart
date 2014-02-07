@@ -23,6 +23,8 @@
 
 library builder.unittest;
 
+import 'dart:convert';
+
 import 'dart:isolate';
 export 'dart:isolate' show SendPort;
 
@@ -165,7 +167,7 @@ class BuilderConfiguration extends SimpleConfiguration {
   void _send(logger.LogMessage msg) {
     print("sending " + msg.toJson().toString());
     try {
-      _replyTo.send(msg);
+      _replyTo.send(JSON.encode(msg.toJson()));
     } catch (e, s) {
       print(e);
       print(s);
@@ -215,6 +217,9 @@ class LogUnitTestMessage extends logger.LogToolMessage {
 
   @override
   Map<String, dynamic> createParams() {
+    // FIXME make this more robust in the future
+    var trace = testFailureTrace.toString();
+
     var params = super.createParams();
     params.addAll(<String, dynamic>{
         "id": testId,
@@ -222,9 +227,9 @@ class LogUnitTestMessage extends logger.LogToolMessage {
         "failureMessage": testFailureMessage,
         "passed": testPassed,
         "result": testResult,
-        "failureTrace": testFailureTrace,
-        "startTime": testStartTime,
-        "runingTime": testRunTime,
+        "failureTrace": trace,
+        "startTime": testStartTime.toString(), // FIXME
+        "runingTime": testRunTime.toString(), // FIXME
         "testGroup": testGroup
     });
     return params;

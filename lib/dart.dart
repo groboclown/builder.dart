@@ -302,7 +302,7 @@ StreamTransformer<String, List<String>> createCsvTransformer(
  * Outputs messages to test result files.
  */
 typedef Future TestResultWriter(Project project, DirectoryResource basedir,
-    Resource testFile, Stream<LogMessage> messages);
+    Resource testFile, Stream<String> messages);
 
 
 
@@ -404,18 +404,20 @@ class UnitTests extends BuildTool {
 
 final TestResultWriter JSON_TEST_RESULT_WRITER =
     (Project project, DirectoryResource basedir, Resource testFile,
-    Stream<LogMessage> messages) {
+    Stream<String> messages) {
   List<Map> vals = [];
   Resource outfile = basedir.child("testresult-" + testFile.name + ".json");
   Completer completer = new Completer.sync();
   messages.listen(
-    (LogMessage msg) {
-      print("received message" + msg.toJson().toString());
-      project.logger.message(msg);
-      vals.add(msg.toJson());
+    (String msg) {
+      print("*** received message" + msg);
+      var val = JSON.decode(msg);
+      // FIXME convert from JSON to msg?
+      //project.logger.message(msg);
+      vals.add(val);
     },
     onDone: () {
-      print("completed tests for " + testFile.relname);
+      print("*** completed tests for " + testFile.relname + ", received messages count: " + vals.length.toString());
       outfile.writeAsString(JSON.encode(vals));
       completer.complete();
     }
