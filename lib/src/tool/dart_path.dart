@@ -21,29 +21,21 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-library project_test;
+library builder.src.tool.dart_path;
 
-import 'package:builder/unittest.dart';
-import 'package:unittest/vm_config.dart';
+/**
+ * Methods to invoke the commands distributed with the dart sdk.
+ */
 
-import 'package:builder/builder.dart';
+import 'dart:io';
+import 'package:path/path.dart' as path;
 
+final List<String> DART_PATH = <String>[
+    (Platform.environment['DART_SDK'] == null
+    ? null
+    : path.join(Platform.environment['DART_SDK'], "bin")),
+    (Platform.environment['DART_HOME'] == null
+    ? null
+    : path.join(Platform.environment['DART_HOME'], "bin" ))];
+final String DART_ANALYZER_NAME = "dartanalyzer";
 
-test_TopologicalSort() {
-  test('test 1', () => print("test 1"));
-}
-
-
-all_tests() {
-  test_TopologicalSort();
-}
-
-
-
-main(List<String> args, [ replyTo ]) {
-  selectConfiguration(replyTo, useVMConfiguration);
-  all_tests();
-  if (!args.isEmpty) {
-    filterTests(args[0]);
-  }
-}

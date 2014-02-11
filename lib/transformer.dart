@@ -21,29 +21,15 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-library project_test;
+library builder.transformer;
 
-import 'package:builder/unittest.dart';
-import 'package:unittest/vm_config.dart';
+/**
+ * All the transformer versions of the build tools.
+ *
+ * See [http://pub.dartlang.org/doc/assets-and-transformers.html#specifying-transformers]
+ * for more details on using transformers with `pub`.
+ */
 
-import 'package:builder/builder.dart';
+export 'src/transformer/unittest.dart';
+export 'src/transformer/dartdoc.dart';
 
-
-test_TopologicalSort() {
-  test('test 1', () => print("test 1"));
-}
-
-
-all_tests() {
-  test_TopologicalSort();
-}
-
-
-
-main(List<String> args, [ replyTo ]) {
-  selectConfiguration(replyTo, useVMConfiguration);
-  all_tests();
-  if (!args.isEmpty) {
-    filterTests(args[0]);
-  }
-}

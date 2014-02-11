@@ -25,9 +25,15 @@
 library builder.logger;
 
 import 'dart:convert';
+import 'dart:io';
+
+import 'package:ansicolor/ansicolor.dart';
+
 
 import 'target.dart';
 import '../resource.dart';
+
+
 
 
 class Logger {
@@ -94,6 +100,7 @@ const String WARNING = "warning";
 const String ERROR = "error";
 const String INFO = "info";
 const String MAPPING = "mapping";
+const String DEBUG = "debug";
 
 
 /**
@@ -102,10 +109,13 @@ const String MAPPING = "mapping";
 class LogMessage {
   String level; // WARNING or ERROR or INFO
   String message;
+  final String message_type;
 
-  LogMessage({ String level: INFO, String message: null }) :
-      this.level = level,
-      this.message = message;
+  factory LogMessage({ String level: INFO, String message: null }) {
+    return new LogMessage._("general", level, message);
+  }
+
+  LogMessage._(this.message_type, this.level, this.message);
 
 
   factory LogMessage.tool({ String level: INFO, String tool: "internal",
@@ -132,6 +142,11 @@ class LogMessage {
   }
 
 
+  factory LogMessage.fromJson(jsonValue) {
+    return new JsonLogMessage(jsonValue);
+  }
+
+
 
 
 
@@ -143,7 +158,8 @@ class LogMessage {
 
 
   Map<String, dynamic> toJson() {
-    return { "method": level, "params": createParams() };
+    return { "method": level, "message_type": message_type,
+        "params": createParams() };
   }
 }
 
@@ -158,11 +174,11 @@ class LogToolMessage extends LogMessage {
 
   LogToolMessage({ String level: INFO, String tool: "internal",
       String category: "INTERNAL", String id: "UNKNOWN",
-      String message: null }) :
+      String message: null, String message_type: "tool" }) :
       this.tool = tool,
       this.category = category,
       this.id = id,
-      super(level: level, message: message);
+      super._(message_type, level, message);
 
   @override
   Map<String, dynamic> createParams() {
@@ -189,12 +205,13 @@ class LogResourceMessage extends LogToolMessage {
   LogResourceMessage({ String level: INFO, String tool: "internal",
       String category: "INTERNAL", String id: "UNKNOWN",
       Resource file: null, int line: 1, int charStart: 0, int charEnd: 0,
-      String message: null }) :
+      String message: null, String message_type: "resource" }) :
       this.file = file,
       this.line = line,
       this.charStart = charStart,
       this.charEnd = charEnd,
-      super(level: level, tool: tool, category: category, id: id, message: message);
+      super(level: level, tool: tool, category: category, id: id,
+        message: message, message_type: message_type);
 
   @override
   Map<String, dynamic> createParams() {
@@ -220,11 +237,12 @@ class LogMappingMessage extends LogMessage {
   Resource to;
 
   LogMappingMessage({ String tool: "internal",
-      Resource from: null, Resource to: null }) :
+      Resource from: null, Resource to: null,
+      message_type: "mapping" }) :
       this.tool = tool,
       this.from = from,
       this.to = to,
-      super(level: MAPPING, message: "mapped `" + from.toString() +
+      super._(message_type, MAPPING, "mapped `" + from.toString() +
         "` to `" + to.toString() + "`");
 
   @override
@@ -241,7 +259,27 @@ class LogMappingMessage extends LogMessage {
 }
 
 
+class JsonLogMessage extends LogMessage {
+  final Map<String, dynamic> params = <String, dynamic>{};
 
+  JsonLogMessage(jsonMessage) :
+      super._(jsonMessage['message_type'], jsonMessage['method'],
+        jsonMessage['params']['message']) {
+
+    jsonMessage['params'].forEach((k, v) {
+      if (k != 'message') {
+        params[k] = v;
+      }
+    });
+  }
+
+  @override
+  Map<String, dynamic> createParams() {
+    var p = super.createParams();
+    p.addAll(params);
+    return p;
+  }
+}
 
 
 
@@ -268,19 +306,45 @@ class JsonLogger extends AbstractLogger {
 
 
 class CmdLogger extends AbstractLogger {
+  final AnsiPen pen;
+
+  CmdLogger([ bool enableColor = null ]) : pen = new AnsiPen() {
+    if (enableColor == false || (enableColor == null && Platform.isWindows)) {
+      // windows CMD by default doesn't support ansi colors
+      color_disabled = true;
+    }
+  }
+
 
   @override
   void output(TargetMethod tm, LogMessage message) {
     var params = message.createParams();
-    print(message.level.substring(0,
+
+    var buff = new StringBuffer();
+    if (message.level == ERROR) {
+      pen.magenta(bold: true);
+    } else if (message.level == WARNING) {
+      pen.cyan(bold: true);
+    } else {
+      print("unknown level: " + message.level);
+      pen.white(bold: true);
+    }
+    buff.write(pen(message.level.substring(0,
         message.level.length > 4 ? 4 : message.level.length)
-      .toUpperCase() + " [" + (tm == null ? "???" : tm.name) + "] " +
-        message.message);
-    if (message is LogResourceMessage) {
-      var rm = message;
-      print("   in " + rm.file.relname + ", line " + rm.line.toString() +
-        ", col " + (rm.charStart + 1).toString() + "-" +
-        (rm.charEnd + 1).toString());
+          .toUpperCase()));
+    pen.green(bold: true);
+    buff
+      ..write(" [")
+      ..write(pen((tm == null ? "???" : tm.name)))
+      ..write("] ")
+      ..write(message.message);
+    print(buff);
+
+    if (message.message_type == 'resource') {
+      var parms = message.createParams();
+      print("   in " + parms['file'] + ", line " + parms['line'].toString() +
+        ", col " + (parms['charStart'] + 1).toString() + "-" +
+        (parms['charEnd'] + 1).toString());
     }
   }
 }

@@ -21,29 +21,10 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-library project_test;
 
-import 'package:builder/unittest.dart';
-import 'package:unittest/vm_config.dart';
-
-import 'package:builder/builder.dart';
+library builder.src.tool.dart2js;
 
 
-test_TopologicalSort() {
-  test('test 1', () => print("test 1"));
-}
-
-
-all_tests() {
-  test_TopologicalSort();
-}
-
-
-
-main(List<String> args, [ replyTo ]) {
-  selectConfiguration(replyTo, useVMConfiguration);
-  all_tests();
-  if (!args.isEmpty) {
-    filterTests(args[0]);
-  }
-}
+/**
+ * Executes the `dart2js` command in a separate process.
+ */

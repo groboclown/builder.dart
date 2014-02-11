@@ -75,7 +75,7 @@ class BuildArgs {
     if (res['machine']) {
       logger = new JsonLogger();
     } else {
-      logger = new CmdLogger();
+      logger = new CmdLogger(res['color']);
     }
 
     var changed = res['changed'];
@@ -121,6 +121,8 @@ ArgResults _parseArgs(Iterable<String> args,
       allowMultiple: true)
     ..addFlag("machine",
       help: "Print rich JSON error messages to the standard output (stdout)")
+    ..addFlag("color",
+      help: "Force display in color mode", defaultsTo: null)
     ..addFlag("help",
       help: "This help message",
       negatable: false);

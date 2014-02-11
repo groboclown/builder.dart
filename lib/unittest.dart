@@ -69,13 +69,13 @@ class BuilderConfiguration extends SimpleConfiguration {
   final SendPort _replyTo;
 
   BuilderConfiguration(this._replyTo) {
-    print("BuilderConfiguration()");
+    //print("BuilderConfiguration()");
     throwOnTestFailures = false;
   }
 
   @override
   void onInit() {
-    print("onInit");
+    //print("onInit");
     super.onInit();
     filterStacks = formatStacks = true;
   }
@@ -85,7 +85,7 @@ class BuilderConfiguration extends SimpleConfiguration {
     super.onTestStart(testCase);
 
     //print("onTestStart " + testCase.description);
-    _log(testCase.description, "running");
+    _log(testCase.description, testCase.description + " running");
   }
 
   @override
@@ -93,7 +93,7 @@ class BuilderConfiguration extends SimpleConfiguration {
     //print("onTestResult " + testCase.description);
     super.onTestResult(testCase);
 
-    _log(testCase.description, "completed");
+    _log(testCase.description, testCase.description + " completed");
 
   }
 
@@ -107,7 +107,7 @@ class BuilderConfiguration extends SimpleConfiguration {
     //print("onTestResultChanged " + testCase.description);
     super.onTestResultChanged(testCase);
 
-    _log(testCase.description, "updated");
+    _log(testCase.description, testCase.description + " updated");
   }
 
   /**
@@ -128,7 +128,7 @@ class BuilderConfiguration extends SimpleConfiguration {
     //print("onDone " + success.toString());
     super.onDone(success);
 
-    _log("test-runner", "tests completed");
+    _log("<test-runner>", "tests completed");
     // NOTE no way to explicitly close the port
   }
 
@@ -144,9 +144,9 @@ class BuilderConfiguration extends SimpleConfiguration {
       String uncaughtError) {
     print("onSummary(${passed}, ${failed}, ${errors}, ${results}, ${uncaughtError})");
 
-    _log("tests completed", passed.toString() +
+    _log("<test-runner>", "Tests completed: " + passed.toString() +
       " passed, " + failed.toString() + " failed, " + errors.toString() +
-      "failed", (failed + errors > 0) ? logger.ERROR : logger.INFO);
+      " errors", (failed + errors > 0) ? logger.ERROR : logger.INFO);
     if (uncaughtError != null) {
       _log("uncaught error", uncaughtError, logger.ERROR);
     }
@@ -165,13 +165,24 @@ class BuilderConfiguration extends SimpleConfiguration {
   }
 
   void _send(logger.LogMessage msg) {
-    print("sending " + msg.toJson().toString());
+    //print("sending " + msg.toJson().toString());
     try {
       _replyTo.send(JSON.encode(msg.toJson()));
     } catch (e, s) {
       print(e);
       print(s);
     }
+  }
+
+  String _tcName(TestCase tc) {
+    var ret = tc.description;
+    if (tc.currentGroup != null && tc.currentGroup.length > 0) {
+      ret += " (" + tc.currentGroup + ")";
+    }
+    if (tc.message != null) {
+      ret += ": " + tc.message;
+    }
+    return ret;
   }
 }
 
@@ -213,7 +224,8 @@ class LogUnitTestMessage extends logger.LogToolMessage {
     testGroup = testCase.currentGroup,
     super(level: (testCase.passed ? logger.INFO : logger.ERROR),
         tool: "unittest", category: "test", id: "UNKNOWN",
-        message: testCase.passed ? "passed" : testCase.message);
+        message: testCase.description + " " + (testCase.passed ? "passed" : testCase.message),
+        message_type: "unittest");
 
   @override
   Map<String, dynamic> createParams() {
