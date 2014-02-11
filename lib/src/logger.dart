@@ -31,7 +31,7 @@ import 'package:ansicolor/ansicolor.dart';
 
 
 import 'target.dart';
-import '../resource.dart';
+import 'resource.dart';
 
 
 

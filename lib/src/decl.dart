@@ -31,7 +31,7 @@ import 'dart:io';
 import 'dart:mirrors';
 import 'dart:async';
 
-import '../resource.dart';
+import 'resource.dart';
 import 'target.dart';
 import 'exceptions.dart';
 import 'project.dart';

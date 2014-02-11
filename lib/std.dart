@@ -28,7 +28,7 @@ library builder.std;
  * (package layout conventions)[http://pub.dartlang.org/doc/package-layout.html].
  */
 
-import 'resource.dart';
+import 'src/resource.dart';
 import 'tool.dart';
 
 import 'dart:io';

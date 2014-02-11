@@ -67,8 +67,8 @@ export 'src/target.dart' show
 export 'src/failure.dart' show
   FailureMode, handleFailure;
 
-export 'resource.dart';
-export 'os.dart';
+export 'src/resource.dart';
+export 'src/os.dart';
 
 
 

@@ -31,7 +31,7 @@ import 'logger.dart';
 import 'argparser.dart';
 import 'target.dart';
 import 'exceptions.dart';
-import '../resource.dart';
+import 'resource.dart';
 
 
 

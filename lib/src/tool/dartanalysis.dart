@@ -30,8 +30,8 @@ import 'dart:convert';
 
 import 'dart_path.dart';
 
-import '../../resource.dart';
-import '../../os.dart';
+import '../resource.dart';
+import '../os.dart';
 import '../logger.dart';
 import '../exceptions.dart';
 import '../target.dart';

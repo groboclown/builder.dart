@@ -33,7 +33,7 @@ import 'tool.dart' as tool;
 export 'tool.dart' show
     Pipe, BuildTool, addPhase, getTargets,
     PHASE_CLEAN, PHASE_BUILD, PHASE_ASSEMBLE, PHASE_DEPLOY;
-export 'resource.dart';
+export 'src/resource.dart';
 export 'src/failure.dart' show
     FailureMode, Failure,
     DEFAULT_FAILURE_MODE, IGNORE_FAILURE, WARN_ON_FAILURE, STOP_ON_FAILURE;

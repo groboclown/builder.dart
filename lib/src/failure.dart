@@ -25,7 +25,7 @@
 library builder.src.failure;
 
 
-import '../resource.dart';
+import 'resource.dart';
 import 'project.dart';
 import 'exceptions.dart';
 

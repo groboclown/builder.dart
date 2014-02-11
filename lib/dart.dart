@@ -32,7 +32,7 @@ import 'dart:convert';
 import 'dart:isolate';
 import 'dart:async';
 
-import 'resource.dart';
+import 'src/resource.dart';
 import 'tool.dart';
 import 'src/logger.dart';
 
