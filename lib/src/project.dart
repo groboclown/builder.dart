@@ -114,9 +114,6 @@ class Project {
       throw new Exception("null target");
     }
 
-    // FIXME use 'dart:async' runZoned(the stuff below, onErrorHandler)
-    // to correctly handle the errors generated.
-
     Project parent = this;
     Future<Project> rootFuture = new Future<Project>.sync(() => parent);
     Future<Project> future = rootFuture;
@@ -146,8 +143,9 @@ class Project {
       }
 
       if (addedCount <= 0) {
-        future = future.then((p) => print(
-            "Nothing to do.  Use '--help' to see all the options."));
+        future = future.then((p) => _baseLogger.output(null, new LogMessage(
+          level: ERROR,
+          message: "Nothing to do.  Use '--help' to see all the options.")));
       }
       future.then((p) {
         statusStream.add(0);

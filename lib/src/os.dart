@@ -32,7 +32,7 @@ import 'dart:io';
 import 'package:path/path.dart' as path;
 
 import 'resource.dart';
-import 'src/exceptions.dart';
+import 'exceptions.dart';
 
 final Map<String, List<String>> EXEC_EXT_LIST = <String, List<String>>{
   "linux": <String>[ "", ".sh", ".py", ".pl" ],

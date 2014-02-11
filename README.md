@@ -4,7 +4,7 @@ builder.dart
 A general build tool for Dart projects, allowing for easy execution from the
 command line and from the Dart Editor.
 
-It supports both a (*procedural*)[#Procedural] and (*declarative*)[#Declarative]
+It supports both a *(procedural)[#Procedural]* and *(declarative)[#Declarative]*
 style.
 
 There is also planned support for
@@ -25,6 +25,9 @@ The following features are planned:
 * Update this documentation as work progresses.
 * Add support for testing frameworks like DumpRenderTree (used by Dart team's [web-ui](https://github.com/dart-lang/web-ui) project)
 * Work on publicity and integration with tools like [drone.io](http://docs.drone.io/dart.html)
+
+**Because this is such an early state of the build tool, expect the API to
+change in the future.**
 
 
 
@@ -53,7 +56,7 @@ route, and make your build file accordingly.
 
 
 Declarative
------------
+===========
 
 A *declarative* build works by declaring what build actions depend on each other,
 then it's up to the build library to decide what should actually be run.  You lose
@@ -122,13 +125,13 @@ See [#Running The Build] for details on how to run these targets.
 If no target is given when the build is run, the declarative form of the build
 will run only the targets that have changed.  Currently, the changes are
 detected using the Dart Editor style by passing in `--changed (filename)` and
-`--deleted (filename)`.  Future updates may automatically find changes if those
+`--removed (filename)`.  Future updates may automatically find changes if those
 are not given.
 
 
 
 Procedural
-----------
+==========
 
 Rather than have the build system know the steps, you may instead want to just
 code the precise steps yourself.  The `builder` library supports this style of
@@ -206,23 +209,47 @@ Run the clean target:
 
 
 
-Helper Tools
-============
+Supported Tools
+===============
+
+`builder` provides several tools that are usually needed as part of a normal
+build system.
 
 
-builder/resource.dart
----------------------
+All Tools
+---------
 
-...
+All tools use this standard creation method, along with their own
+additional custom arguments.
 
-builder/dart.dart
------------------
 
-...
+Delete
+------
+*included in `builder/std.dart`*
+
+
+MkDir
+-----
+*included in `builder/std.dart`*
+
+Creates an empty directory.  Usually, this isn't needed, because the builder
+tools will create directories as necessary.  However, under some circumstances,
+you may need an empty directory created.
+
+
+DartAnalyzer
+------------
+*included in `builder/dart.dart`*
+
+
+UnitTests
+---------
+*included in `builder/dart.dart`*
+
 
 
 Making Your Own Tool
---------------------
+====================
 
 ...
 

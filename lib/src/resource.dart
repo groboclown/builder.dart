@@ -36,7 +36,7 @@ import 'dart:async';
 
 import 'package:path/path.dart' as path;
 
-import 'src/exceptions.dart';
+import 'exceptions.dart';
 
 bool CASE_SENSITIVE = true;
 

@@ -327,30 +327,32 @@ class CmdLogger extends AbstractLogger {
     var params = message.createParams();
 
     var buff = new StringBuffer();
-    if (message.level == ERROR) {
-      pen
-        ..white(bold: true)
-        ..red(bg: true);
-    } else if (message.level == WARNING) {
+    if (tm != null) {
+      if (message.level == ERROR) {
+        pen
+          ..white(bold: true)
+          ..red(bg: true);
+      } else if (message.level == WARNING) {
+        pen
+          ..reset()
+          ..magenta(bold: true);
+      } else {
+        pen
+          ..reset()
+          ..white(bold: true);
+      }
+      buff.write(pen(message.level.substring(0,
+          message.level.length > 4 ? 4 : message.level.length)
+            .toUpperCase()));
       pen
         ..reset()
-        ..magenta(bold: true);
-    } else {
-      pen
-        ..reset()
-        ..white(bold: true);
+        ..green(bold: true);
+      buff
+        ..write(" [")
+        ..write(pen((tm == null ? "???" : tm.name)))
+        ..write("] ");
     }
-    buff.write(pen(message.level.substring(0,
-        message.level.length > 4 ? 4 : message.level.length)
-          .toUpperCase()));
-    pen
-      ..reset()
-      ..green(bold: true);
-    buff
-      ..write(" [")
-      ..write(pen((tm == null ? "???" : tm.name)))
-      ..write("] ")
-      ..write(message.message);
+    buff..write(message.message);
     print(buff);
 
     var parms = message.createParams();

@@ -36,7 +36,9 @@ import 'src/resource.dart';
 import 'tool.dart';
 import 'src/logger.dart';
 
-import 'src/tool/dartanalysis.dart';
+import 'src/tool/dartanalyzer.dart';
+export 'src/tool/dartanalyzer.dart' show
+  dartAnalyzer;
 
 final List<String> DART_PATH = <String>[
     (Platform.environment['DART_SDK'] == null
