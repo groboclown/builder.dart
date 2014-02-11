@@ -298,8 +298,14 @@ class JsonLogger extends AbstractLogger {
 
   @override
   void output(TargetMethod tm, LogMessage message) {
+    var parms = message.createParams();
+
+    // The 'file' part is required by the Dart editor.
+    if (! parms.containsKey("file")) {
+      parms["file"] = "";
+    }
     print('[{"method":"' + message.level + '","params":' +
-        JSON.encode(message.createParams()) + '}]');
+        JSON.encode(parms) + '}]');
   }
 }
 
@@ -322,17 +328,24 @@ class CmdLogger extends AbstractLogger {
 
     var buff = new StringBuffer();
     if (message.level == ERROR) {
-      pen.magenta(bold: true);
+      pen
+        ..white(bold: true)
+        ..red(bg: true);
     } else if (message.level == WARNING) {
-      pen.cyan(bold: true);
+      pen
+        ..reset()
+        ..magenta(bold: true);
     } else {
-      print("unknown level: " + message.level);
-      pen.white(bold: true);
+      pen
+        ..reset()
+        ..white(bold: true);
     }
     buff.write(pen(message.level.substring(0,
         message.level.length > 4 ? 4 : message.level.length)
           .toUpperCase()));
-    pen.green(bold: true);
+    pen
+      ..reset()
+      ..green(bold: true);
     buff
       ..write(" [")
       ..write(pen((tm == null ? "???" : tm.name)))
@@ -340,11 +353,26 @@ class CmdLogger extends AbstractLogger {
       ..write(message.message);
     print(buff);
 
-    if (message.message_type == 'resource') {
-      var parms = message.createParams();
-      print("   in " + parms['file'] + ", line " + parms['line'].toString() +
-        ", col " + (parms['charStart'] + 1).toString() + "-" +
-        (parms['charEnd'] + 1).toString());
+    var parms = message.createParams();
+    if (message.message_type == 'resource' &&
+        parms['charStart'] != 0 &&
+        parms['charEnd'] != 0) {
+      pen
+        ..reset()
+        ..yellow();
+      buff.clear();
+      buff..write("...  in ")
+          ..write(pen(parms['file']))
+          ..write(", line ");
+      pen
+        ..reset()
+        ..cyan();
+      buff
+        ..write(pen(parms['line'].toString()))
+        ..write(", col ")
+        ..write(pen((parms['charStart'] + 1).toString() + "-" +
+          (parms['charEnd'] + 1).toString()));
+      print(buff);
     }
   }
 }

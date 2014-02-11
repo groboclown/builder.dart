@@ -128,7 +128,8 @@ ArgResults _parseArgs(Iterable<String> args,
       negatable: false);
 
   supportedTargets.forEach((k) =>
-    parser.addFlag(k.name, help: k.targetDef.description, negatable: false));
+    parser.addFlag(k.name, help: "Run target " + k.targetDef.description,
+      negatable: false));
 
   var res;
   try {

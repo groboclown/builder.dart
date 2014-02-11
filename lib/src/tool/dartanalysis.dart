@@ -93,7 +93,10 @@ Future dartAnalyzer(
       });
     return process.exitCode;
   }).then((code) {
-    logger.info("Completed processing " + dartFile.name);
+    logger.fileInfo(
+        tool: "dartanalysis",
+        file: dartFile,
+        message: "Completed processing " + dartFile.name);
     return new Future.value(0);
   });
 }
