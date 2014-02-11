@@ -357,6 +357,9 @@ class CmdLogger extends AbstractLogger {
     if (message.message_type == 'resource' &&
         parms['charStart'] != 0 &&
         parms['charEnd'] != 0) {
+
+      // TODO load the file and show the problem!
+
       pen
         ..reset()
         ..yellow();

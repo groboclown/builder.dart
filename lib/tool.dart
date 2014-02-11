@@ -37,10 +37,10 @@
  * can be added with the [addPhase()] call.  Additionally, the phases
  * have the "default" target setting, not the tools.
  */
-
 library builder.tool;
 
-// Make a few private items publicly available.
+// Make a few private items publicly available.  This allows external projects
+// to make their own tools and only need to import this one file.
 
 //import 'src/exceptions.dart';
 export 'src/exceptions.dart' show
@@ -66,6 +66,11 @@ export 'src/target.dart' show
 //import 'src/failure.dart';
 export 'src/failure.dart' show
   FailureMode, handleFailure;
+
+export 'resource.dart';
+export 'os.dart';
+
+
 
 const String TARGET_CLEAN = "clean";
 const String TARGET_BUILD = "build";

@@ -1,7 +1,16 @@
 builder.dart
 ============
 
-General build tool for Dart projects.  It supports both a *procedural* and *declarative* style.
+A general build tool for Dart projects, allowing for easy execution from the
+command line and from the Dart Editor.
+
+It supports both a (*procedural*)[#Procedural] and (*declarative*)[#Declarative]
+style.
+
+There is also planned support for
+(pub transformers)[http://pub.dartlang.org/doc/assets-and-transformers.html#specifying-transformers]
+to allow using some standard Dart build processes, like unit testing and
+document generation, as part of the `pub build` tool.
 
 
 
@@ -9,6 +18,8 @@ Status
 ======
 
 The tool is just in the beginnings, but already it builds itself.
+
+The following features are planned:
 
 * Add more helper libraries to make creation of builds easier: dart, dart2js, pub, zip, unzip.
 * Update this documentation as work progresses.
@@ -33,6 +44,9 @@ the builder library to your `pubspec.yaml` file in the `dev_dependencies` sectio
 
 The library belongs in the `dev_dependencies` section, not `dependencies`,
 because it is only used to build the project.
+
+Because of this change to dependencies, you'll need to run `pub install` before
+running the build.
 
 Next, you need to decide if you're going to take the procedural or declarative
 route, and make your build file accordingly.
@@ -63,45 +77,63 @@ Your build will have this kind of structure:
     // The standard dart language tools
     import 'package:builder/dart.dart';
 
-    // --------------------------------------------------------------------
-    // Directories and file sets
-    final libDir = ROOT_DIR.child("lib/");
-    final mainDartSrc = new DeepListableResourceCollection.files(libDir,
-        (r) => r.name.endsWith(".dart"));
+    // The standard package layout definitions
+    import 'package:builder/std.dart';
 
-    final testDir = ROOT_DIR.child("test/");
-    final testDartSrc = new DeepListableResourceCollection.files(testDir,
-        (r) => r.name.endsWith(".dart"));
+    // -------------------------------------------------------------------
+    // Extra Directories
 
-    final allDartSrc = new ResourceSet.from([ mainDartSrc, testDartSrc ]);
+    final DirectoryResource OUTPUT_DIR = new FileEntityResource.asDir(".work/");
+    final DirectoryResource TEST_SUMMARY_DIR =
+      OUTPUT_DIR.child("test-results/");
 
-    // --------------------------------------------------------------------
+
+
+    // -------------------------------------------------------------------
     // Targets
 
     final dartAnalyzer = new DartAnalyzer("lint",
         description: "Check the Dart files for language issues",
-        dartFiles: allDartSrc);
+        dartFiles: DART_FILES);
 
-    
-    // Run the build
+
+    final cleanOutput = new Delete("clean-output",
+        description: "Clean the generated files",
+        files: OUTPUT_DIR.everything(),
+        onFailure: IGNORE_FAILURE);
+
+
+    final unitTests = new UnitTests("test",
+        description: "Run unit tests and generate summary report",
+        testFiles: TEST_FILES,
+        summaryDir: TEST_SUMMARY_DIR);
+
+
     void main(List<String> args) {
+      // Run the build
       build(args);
     }
 
+
 Each constructed build tool in the `build` library will be picked up as a
-target to run.
+target to run, with the target name being the first argument.
+See [#Running The Build] for details on how to run these targets.
+
+If no target is given when the build is run, the declarative form of the build
+will run only the targets that have changed.  Currently, the changes are
+detected using the Dart Editor style by passing in `--changed (filename)` and
+`--deleted (filename)`.  Future updates may automatically find changes if those
+are not given.
+
 
 
 Procedural
 ----------
 
-
-You first need to add the builder library to your `pubspec.yaml` file:
-
-
-
-Note: due to this change, any build of your project will still require a new
-copy of the code to run `pub install` to pull in the builder library.
+Rather than have the build system know the steps, you may instead want to just
+code the precise steps yourself.  The `builder` library supports this style of
+*procedural* builds, similar to the (Apache Ant project)[http://ant.apache.org]
+for Java projects.
 
 Next, in accordance with the [dart build file standard](https://www.dartlang.org/tools/editor/build.html),
 create the file `build.dart` in the root project directory.  It should look
@@ -144,7 +176,11 @@ like this:
 Note the special `@target` annotation to denote a build target.  This annotation
 takes a text description (`String`) as an argument, and an optional list of
 target names (`List<String>`) as the dependent targets that need to run before
-this one.
+this one.  To specify the target that the build runs by default,
+use the `@target.main` annotation.
+
+
+
 
 Running The Build
 =================
@@ -156,7 +192,7 @@ it can also be run from the command-line.
 
 Run the default target:
 
-`dart -c build.dart`
+`dart build.dart`
 
 
 Discover the available targets:
@@ -187,6 +223,9 @@ builder/dart.dart
 
 Making Your Own Tool
 --------------------
+
+...
+
 
 
 License

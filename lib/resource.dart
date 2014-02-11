@@ -377,12 +377,12 @@ class ListableResourceCollection extends AbstractResourceCollection {
 }
 
 
-class DeepListableResourceCollection extends ListableResourceCollection {
+class DirectoryCollection extends ListableResourceCollection {
   ResourceTest recurseTest;
   bool addDirectories;
   
   
-  factory DeepListableResourceCollection.files(ResourceListable res,
+  factory DirectoryCollection.files(ResourceListable res,
       ResourceTest fileTest) {
     //ResourceTest resTest = (f) {
     //    print("Checking " + f.name + ": directory? " + f.isDirectory.toString() + "; fileTest? " + fileTest(f).toString());
@@ -390,7 +390,12 @@ class DeepListableResourceCollection extends ListableResourceCollection {
     //    return fileTest(f);
     //};
     ResourceTest recurseTest = DEFAULT_IGNORE_TEST;
-    return new DeepListableResourceCollection(res, fileTest, recurseTest);
+    return new DirectoryCollection(res, fileTest, recurseTest);
+  }
+
+
+  factory DirectoryCollection.everything(ResourceListable root) {
+    return new DirectoryCollection(root, null, null, true);
   }
   
   
@@ -399,7 +404,7 @@ class DeepListableResourceCollection extends ListableResourceCollection {
    * the output or not.  `recurseTest` is for deciding whether a
    * [ResourceListable] should have its contents examined.
    */
-  DeepListableResourceCollection(ResourceListable res, [ ResourceTest resourceTest,
+  DirectoryCollection(ResourceListable res, [ ResourceTest resourceTest,
     ResourceTest recurseTest, bool addDirectories = false ]) :
     this.recurseTest = recurseTest, this.addDirectories = addDirectories,
     super(res, resourceTest);
@@ -691,8 +696,13 @@ class DirectoryResource extends FileEntityResource<FileSystemEntity>
 
   ResourceCollection asCollection({ ResourceTest resourceTest,
       ResourceTest recurseTest, bool addDirectories: false }) {
-    return new DeepListableResourceCollection(this,
+    return new DirectoryCollection(this,
       resourceTest, recurseTest, addDirectories);
+  }
+
+
+  ResourceCollection everything() {
+    return new DirectoryCollection.everything(this);
   }
 
 

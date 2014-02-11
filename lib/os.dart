@@ -23,7 +23,7 @@
 
 /**
  * Adds OS-specific knowledge to the standard Dart objects ([Process] and
- * [Platform]).  FIXME use the "path" library.
+ * [Platform]).
  */
 
 library builder.exec;
@@ -92,6 +92,9 @@ Resource resolveExecutable(String name, [ List<String> additionalPath,
  * Splits a path definition into separate [DirectoryResource] objects,
  * using ':', ';', or [Platform.pathSeparator].  The returned items
  * may not exist.
+ *
+ * To split a file system object into its directory components, use the
+ * `path` package.
  */
 List<ResourceListable> parseDirectoryPath(String path,
     { path.Context context: null, String pathSeparator: null }) {
@@ -118,10 +121,13 @@ List<ResourceListable> parseDirectoryPath(String path,
 
 
 /**
- * Splits a path definition into separate [DirectoryResource] objects,
+ * Splits a path definition into separate [String]s,
  * using ':', ';', or [Platform.pathSeparator].
  *
  * This is based off of Ant's `PathTokenizer` class.
+ *
+ * To split a file system object into its directory components, use the
+ * `path` package.
  */
 List<String> splitPath(String path,
     [ bool isDosLike = null, String pathSeparatorMatcher ]) {
