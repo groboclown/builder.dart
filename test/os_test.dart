@@ -26,7 +26,7 @@ library os_test;
 
 import 'package:builder/unittest.dart';
 import 'package:unittest/vm_config.dart';
-import 'package:builder/os.dart';
+import '../lib/src/os.dart';
 
 
 test_splitPath() {

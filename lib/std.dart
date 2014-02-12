@@ -235,10 +235,12 @@ class Exec extends BuildTool {
 
   final bool runInShell;
 
-  final FileResource stdin;
-  final FileResource stdout;
-  final FileResource stderr;
+  final FileResource stdinSrc;
+  final FileResource stdoutSrc;
+  final FileResource stderrSrc;
   final bool pipeStderrToStdout;
+  final bool stdoutAppend;
+  final bool stderrAppend;
 
 
 
@@ -253,6 +255,7 @@ class Exec extends BuildTool {
       bool includeParentEnvironment: true,
       bool runInShell: false, FileResource stdin, FileResource stdout,
       FileResource stderr, bool pipeStderrToStdout,
+      bool stdoutAppend: false, bool stderrAppend: false,
       FailureMode onErrorLaunching: null,
       FailureMode onFailure: null }) {
     if (depends == null) {
@@ -291,6 +294,7 @@ class Exec extends BuildTool {
       requiredOutput.add(stdout);
     }
     if (stderr != null) {
+      assert(pipeStderrToStdout == false);
       requiredOutput.add(stderr);
     }
 
@@ -317,7 +321,8 @@ class Exec extends BuildTool {
       .mkTargetDef(name, description, phase, pipe, depends, <String>[]);
     return new Exec._(name, targetDef, phase, pipe,
       workingDir, cmd, args, env, includeParentEnvironment, runInShell,
-      stdin, stdout, stderr, pipeStderrToStdout, onErrorLaunching, onFailure);
+      stdin, stdout, stderr, pipeStderrToStdout, stdoutAppend, stderrAppend,
+      onErrorLaunching, onFailure);
   }
 
 
@@ -327,38 +332,71 @@ class Exec extends BuildTool {
       bool includeParentEnvironment,
       bool runInShell, FileResource stdin, FileResource stdout,
       FileResource stderr, bool pipeStderrToStdout,
+      bool stdoutAppend, bool stderrAppend,
       FailureMode onErrorLaunching, FailureMode onFailure) :
-  this.workingDir = workingDir,
-  this.cmd = cmd,
-  this.args = args,
-  this.env = env,
-  this.includeParentEnvironment = includeParentEnvironment,
-  this.runInShell = runInShell,
-  this.stdin = stdin,
-  this.stdout = stdout,
-  this.stderr = stderr,
-  this.pipeStderrToStdout = pipeStderrToStdout,
-  this.onErrorLaunching = onErrorLaunching,
-  this.onFailure = onFailure,
-  super(name, targetDef, phase, pipe);
+    this.workingDir = workingDir,
+    this.cmd = cmd,
+    this.args = args,
+    this.env = env,
+    this.includeParentEnvironment = includeParentEnvironment,
+    this.runInShell = runInShell,
+    this.stdinSrc = stdin,
+    this.stdoutSrc = stdout,
+    this.stderrSrc = stderr,
+    this.stdoutAppend = stdoutAppend,
+    this.stderrAppend = stderrAppend,
+    this.pipeStderrToStdout = pipeStderrToStdout,
+    this.onErrorLaunching = onErrorLaunching,
+    this.onFailure = onFailure,
+    super(name, targetDef, phase, pipe);
 
 
 
   @override
   Future<Project> start(Project project) {
-    logger.debug("Running [" + cmd.relname + "] with arguments " +
+    project.logger.debug("Running [" + cmd.relname + "] with arguments " +
       args.toString());
 
     return Process.start(cmd.absolute, args,
         workingDirectory: (workingDir == null ? null : workingDir.absolute),
         environment: env,
         includeParentEnvironment: includeParentEnvironment,
-        runInShell: runInShell).then((process) {
+        runInShell: runInShell).then((Process process) {
 
-      
-      // FIXME redirect stderr and stdout, and pass in stdin.
+      var futures = <Future>[];
+      var pout = process.stdout;
 
+      if (pipeStderrToStdout) {
+        pout = new StreamController<List<int>>.broadcast();
+        pout.addStream(process.stdout);
+        pout.addStream(process.stderr);
+      }
+      if (stdoutSrc != null) {
+        futures.add(pipeStream(pout, stdoutSrc, stdoutAppend));
+      } else {
+        stdout.addStream(process.stdout);
+      }
+      if (stderrSrc != null) {
+        futures.add(pipeStream(process.stderr, stderrSrc, stderrAppend));
+      } else if (! pipeStderrToStdout) {
+        stderr.addStream(process.stderr);
+      }
+      if (stdinSrc != null) {
+        var finished = new Completer.sync();
+        try {
+          Stream<List<int>> inp = stdinSrc.openRead();
+          finished = pipeStreamSink(finished, inp, process.stdin);
+        } catch (e, s) {
+          finished = finished.future.completeError(e, s);
+        }
+        futures.add(finished);
+      }
 
+      if (futures.isNotEmpty) {
+        return Future.wait(futures).then((_) => process.exitCode);
+      } else {
+        return process.exitCode;
+      }
 
     }).then((int code) {
       project.logger.info("Completed " + cmd.relname + " with exit code " +
@@ -371,6 +409,44 @@ class Exec extends BuildTool {
       }
       return new Future.value(project);
     });
+  }
+
+
+
+  Future pipeStream(Stream<List<int>> inp, FileResource out, bool append) {
+    var finished = new Completer.sync();
+    try {
+      IOSink outsink = out.openWrite(mode: append
+        ? FileMode.APPEND : FileMode.WRITE);
+      return pipeStreamSink(finished, inp, outsink);
+    } catch (e, s) {
+      finished.completeError(e, s);
+      return finished;
+    }
+  }
+
+
+  Future pipeStreamSink(Completer finished, Stream<List<int>> inp,
+      IOSink outsink) {
+    // We aren't using addStream so that we can correctly catch the
+    // onDone from the stream.
+
+    inp.listen(
+            (data) {
+          try {
+            outsink.add(data);
+          } catch (e, s) {
+            outsink.close().then((_) => finished.completeError(e, s));
+          }
+        }, onDone: () {
+          outsink.close()
+          .then((_) => finished.complete() )
+          .catchError((e, s) => finished.completeError(e, s));
+        }, onError: (e, s) {
+          outsink.close().then((_) => finished.completeError(e, s));
+        }
+    );
+    return finished.future;
   }
 
 }

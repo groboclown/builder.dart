@@ -152,20 +152,37 @@ abstract class Resource<T extends ResourceListable> {
 
 
   /**
-   * Opens the [Resource] for asynchronous access.  Users of this method
-   * must follow the conventions of [RandomAccessFile], and implementations
-   * of [Resource] that provide this method must implement the
-   * [RandomAccessFile] API.  Note that [RandomAccessFile.setPosition(int)]
-   * may throw an exception if the position is after the current position
-   * (no going backwards).
+   * Opens the [Resource] for asynchronous write access.  Users of this method
+   * must close the returned [IOSync] .
    *
-   * If the [mode] is `READ` or `APPEND`, and the [readable] property returns
-   * `false`, then this will throw an [Exception].  Likeise, if the mode is
-   * `WRITE` or `APPEND`, and the [writable] property returns `false`, then this
-   * will throw an [Exception].
+   * If the mode is `WRITE` or `APPEND`, and the [writable] property returns
+   * `false`, then this will throw an [Exception].  For the `APPEND`
+   * file mode, the [readable] attribute must also be `true` or an
+   * [Exception] is thrown.
    */
   // default implementation
-  Future<RandomAccessFile> open(FileMode mode) {
+  IOSink openWrite({ FileMode mode: FileMode.WRITE,
+      Encoding encoding: UTF8 }) {
+    throw new Exception("openWrite not supported on " + name);
+  }
+
+
+  /**
+   * Opens the [Resource] for read in a new independent stream.
+   * Users of this method must close the stream in order to free the system
+   * resources.
+   *
+   * If [startPos] is specified, then the read will start at that byte
+   * offset, otherwise it will begin at the start of the file (0).
+   *
+   * If [endPos] is specified, then the read will stop at that byte offset
+   * in the file (irrespective of the [startPos]).
+   *
+   * If the [readable] property returns
+   * `false`, then this will throw an [Exception].
+   */
+  // default implementation
+  Stream<List<int>> openRead([ int startPos, int endPos ]) {
     throw new Exception("open not supported on " + name);
   }
 
@@ -751,6 +768,19 @@ class FileResource extends FileEntityResource<FileSystemEntity> {
     }
     referencedFile.writeAsStringSync(data, encoding: encoding, flush: true);
   }
+
+  IOSink openWrite({ FileMode mode: FileMode.WRITE,
+                   Encoding encoding: UTF8 }) {
+    if (! referencedFile.parent.existsSync()) {
+      referencedFile.parent.createSync(recursive: true);
+    }
+    return referencedFile.openWrite(mode: mode, encoding: encoding);
+  }
+
+  Stream<List<int>> openRead([ int startPos, int endPos ]) {
+    return referencedFile.openRead(startPos, endPos);
+  }
+
 }
 
 

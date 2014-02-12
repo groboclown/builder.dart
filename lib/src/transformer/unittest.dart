@@ -78,6 +78,6 @@ class UnitTestTransformer extends Transformer {
   @override
   Future apply(Transform transform) {
     // FIXME
-    print("should run unit test on " + primaryInput);
+    print("should run unit test on " + transform.primaryInput);
   }
 }
