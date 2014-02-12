@@ -120,7 +120,7 @@ abstract class Pipe {
   factory Pipe.all({ Iterable<Resource> requiredInput: null,
       Iterable<Resource> optionalInput: null,
       Iterable<Resource> output: null,
-      Map<Resource, List<Resource>> directPipe: null }) {
+      Map<Resource, Iterable<Resource>> directPipe: null }) {
     if (requiredInput == null) {
       requiredInput = <Resource>[];
     }

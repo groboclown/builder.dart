@@ -30,6 +30,7 @@ library builder.std;
 
 import 'src/resource.dart';
 import 'tool.dart';
+export 'tool.dart' show Pipe;
 
 import 'dart:io';
 import 'dart:async';
@@ -216,4 +217,160 @@ class MkDir extends BuildTool {
       return project;
     });
   }
+}
+
+
+/**
+ * Runs a process.
+ */
+class Exec extends BuildTool {
+  final FailureMode onErrorLaunching;
+  final FailureMode onFailure;
+
+  final DirectoryResource workingDir;
+  final FileResource cmd;
+  final List<String> args;
+  final Map<String, String> env;
+  final bool includeParentEnvironment;
+
+  final bool runInShell;
+
+  final FileResource stdin;
+  final FileResource stdout;
+  final FileResource stderr;
+  final bool pipeStderrToStdout;
+
+
+
+
+  factory Exec(String name,
+      { String description: "", String phase: PHASE_BUILD,
+      Iterable<String> depends: null,
+
+      DirectoryResource workingDir: null, FileResource cmd: null,
+      Pipe affectedFiles,
+      Iterable<String> args: null, Map<String, String> env,
+      bool includeParentEnvironment: true,
+      bool runInShell: false, FileResource stdin, FileResource stdout,
+      FileResource stderr, bool pipeStderrToStdout,
+      FailureMode onErrorLaunching: null,
+      FailureMode onFailure: null }) {
+    if (depends == null) {
+      depends = <String>[];
+    }
+
+    if (args == null) {
+      args = <String>[];
+    }
+
+    // Create the correct mappings.
+    var requiredInput = <Resource>[];
+    var requiredOutput = <Resource>[];
+    var optionalInput = <Resource>[];
+    var directPipe = <Resource, Iterable<Resource>>{};
+
+    if (affectedFiles != null) {
+      requiredInput.addAll(affectedFiles.requiredInput);
+      optionalInput.addAll(affectedFiles.optionalInput);
+      requiredOutput.addAll(affectedFiles.output);
+      directPipe.putAll(affectedFiles.directPipe);
+    }
+
+    if (workingDir != null && ! workingDir.exists) {
+      requiredInput.add(workingDir);
+    }
+
+    if (! cmd.exists) {
+      requiredInput.add(cmd);
+    }
+
+    if (stdin != null) {
+      requiredInput.add(stdin);
+    }
+    if (stdout != null) {
+      requiredOutput.add(stdout);
+    }
+    if (stderr != null) {
+      requiredOutput.add(stderr);
+    }
+
+    var allInput = new List<Resource>.from(requiredInput);
+    allInput.addAll(optionalInput);
+    for (var inp in allInput) {
+      for (var out in [ stdout, stderr ]) {
+        if (out != null) {
+          if (directPipe[inp] == null) {
+            directPipe[inp] = <Resource>[];
+          }
+          directPipe[inp].add(out);
+        }
+      }
+    }
+
+
+    var pipe = new Pipe.all(
+      requiredInput: requiredInput,
+      optionalInput: optionalInput,
+      output: requiredInput,
+      directPipe: directPipe);
+    var targetDef = BuildTool
+      .mkTargetDef(name, description, phase, pipe, depends, <String>[]);
+    return new Exec._(name, targetDef, phase, pipe,
+      workingDir, cmd, args, env, includeParentEnvironment, runInShell,
+      stdin, stdout, stderr, pipeStderrToStdout, onErrorLaunching, onFailure);
+  }
+
+
+  Exec._(String name, target targetDef, String phase, Pipe pipe,
+      DirectoryResource workingDir, FileResource cmd,
+      Iterable<String> args, Map<String, String> env,
+      bool includeParentEnvironment,
+      bool runInShell, FileResource stdin, FileResource stdout,
+      FileResource stderr, bool pipeStderrToStdout,
+      FailureMode onErrorLaunching, FailureMode onFailure) :
+  this.workingDir = workingDir,
+  this.cmd = cmd,
+  this.args = args,
+  this.env = env,
+  this.includeParentEnvironment = includeParentEnvironment,
+  this.runInShell = runInShell,
+  this.stdin = stdin,
+  this.stdout = stdout,
+  this.stderr = stderr,
+  this.pipeStderrToStdout = pipeStderrToStdout,
+  this.onErrorLaunching = onErrorLaunching,
+  this.onFailure = onFailure,
+  super(name, targetDef, phase, pipe);
+
+
+
+  @override
+  Future<Project> start(Project project) {
+    logger.debug("Running [" + cmd.relname + "] with arguments " +
+      args.toString());
+
+    return Process.start(cmd.absolute, args,
+        workingDirectory: (workingDir == null ? null : workingDir.absolute),
+        environment: env,
+        includeParentEnvironment: includeParentEnvironment,
+        runInShell: runInShell).then((process) {
+
+      
+      // FIXME redirect stderr and stdout, and pass in stdin.
+
+
+
+    }).then((int code) {
+      project.logger.info("Completed " + cmd.relname + " with exit code " +
+        code.toString());
+      if (code != 0 && onFailure != null) {
+        handleFailure(project,
+          mode: onFailure,
+          failureMessage: cmd.relname + " exited with " + code.toString(),
+          resource: cmd);
+      }
+      return new Future.value(project);
+    });
+  }
+
 }
