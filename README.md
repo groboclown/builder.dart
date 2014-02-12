@@ -8,7 +8,7 @@ It supports both a *[procedural](#Procedural)* and *[declarative](#Declarative)*
 style.
 
 There is also planned support for
-(pub transformers)[http://pub.dartlang.org/doc/assets-and-transformers.html#specifying-transformers]
+[pub transformers](http://pub.dartlang.org/doc/assets-and-transformers.html#specifying-transformers)
 to allow using some standard Dart build processes, like unit testing and
 document generation, as part of the `pub build` tool.
 
