@@ -4,7 +4,7 @@ builder.dart
 A general build tool for Dart projects, allowing for easy execution from the
 command line and from the Dart Editor.
 
-It supports both a *(procedural)[#Procedural]* and *(declarative)[#Declarative]*
+It supports both a *[procedural](#Procedural)* and *[declarative](#Declarative)*
 style.
 
 There is also planned support for
@@ -120,7 +120,8 @@ Your build will have this kind of structure:
 
 Each constructed build tool in the `build` library will be picked up as a
 target to run, with the target name being the first argument.
-See [#Running The Build] for details on how to run these targets.
+See [Running The Build](#Running The Build) for details on how to run these
+targets.
 
 If no target is given when the build is run, the declarative form of the build
 will run only the targets that have changed.  Currently, the changes are
@@ -135,10 +136,11 @@ Procedural
 
 Rather than have the build system know the steps, you may instead want to just
 code the precise steps yourself.  The `builder` library supports this style of
-*procedural* builds, similar to the (Apache Ant project)[http://ant.apache.org]
+*procedural* builds, similar to the [Apache Ant project](http://ant.apache.org)
 for Java projects.
 
-Next, in accordance with the [dart build file standard](https://www.dartlang.org/tools/editor/build.html),
+Next, in accordance with the
+[dart build file standard](https://www.dartlang.org/tools/editor/build.html),
 create the file `build.dart` in the root project directory.  It should look
 like this:
 
