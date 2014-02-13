@@ -97,7 +97,7 @@ Resource resolveExecutable(String name, [ List<String> additionalPath,
  * `path` package.
  */
 List<ResourceListable> parseDirectoryPath(String path,
-    { path.Context context: null, String pathSeparator: null }) {
+    { path.Context context: null, String pathSeparatorMatcher: null }) {
   if (context == null) {
     context = GLOBAL_CONTEXT;
   }
@@ -106,11 +106,8 @@ List<ResourceListable> parseDirectoryPath(String path,
   if (path == null) {
     return ret;
   }
-  if (pathSeparator == null) {
-    pathSeparator = Platform.pathSeparator;
-  }
   var isDosLike = (context.style.name == 'windows');
-  for (String p in splitPath(path, isDosLike, pathSeparator)) {
+  for (String p in splitPath(path, isDosLike, pathSeparatorMatcher)) {
     var f = new FileEntityResource.asDir(p, context: context);
     if (f != null && f is ResourceListable) {
       ret.add(f);
@@ -135,7 +132,11 @@ List<String> splitPath(String path,
     isDosLike = Platform.isWindows;
   }
   if (pathSeparatorMatcher == null) {
-    pathSeparatorMatcher = "[\\;\\:\\" + Platform.pathSeparator + "]";
+    var extrasep = "";
+
+    // the Platform.pathSeparator refers to the directory separator, not the
+    // path separator.
+    pathSeparatorMatcher = "[\\;\\:]";
   }
   var ret = <String>[];
   if (path == null) {
@@ -165,7 +166,7 @@ String _nextPathElement(StringBuffer path, bool isDosLike, String pathSep) {
     path.clear();
     path.write(p);
   }
-  var m = new RegExp("^(.*?)\\" + pathSep + r"(.*)$").firstMatch(p);
+  var m = new RegExp("^(.*?)" + pathSep + r"(.*)$").firstMatch(p);
   if (m != null) {
     ret += m.group(1);
     path.clear();

@@ -508,46 +508,53 @@ final Map<Resource, List<BuildTool>> _PIPED_INPUT =
 
 
 void _connectPipes(BuildTool tool) {
+  connectPipe_internal(tool, tool.pipe, _PIPED_INPUT, _PIPED_OUTPUT);
+}
+
+
+void connectPipe_internal(TargetMethod tm, Pipe pipe,
+    Map<Resource, List<BuildTool>> pipedInput,
+    Map<Resource, List<BuildTool>> pipedOutput) {
   // optionalInput is not connected int the piped input.
 
   // The "Reource" cannot use the "match" in the global piped* structures,
   // because they may not be correctly equal.
 
-  for (var r in tool.pipe.requiredInput) {
-    var links = _PIPED_INPUT[r];
+  for (var r in pipe.requiredInput) {
+    var links = pipedInput[r];
     if (links == null) {
       links = <BuildTool>[];
-      _PIPED_INPUT[r] = links;
+      pipedInput[r] = links;
     }
-    links.add(tool);
+    links.add(tm);
 
-    // This is fairly ineficcient.  A better data structure could tune down
+    // This is fairly inefficient.  A better data structure could tune down
     // the amount of loops in loops.
 
-    _PIPED_OUTPUT.forEach((depr, deptools) => deptools.forEach((deptool) {
+    pipedOutput.forEach((depr, deptools) => deptools.forEach((deptool) {
       // name check first, to omit the possibly long operation on
       // matches.
-      if (! deptool.targetDef.strongDepends.contains(tool.name) &&
+      if (! deptool.targetDef.strongDepends.contains(tm.name) &&
           depr.matches(r)) {
-        deptool.targetDef.strongDepends.add(tool.name);
+        deptool.targetDef.strongDepends.add(tm.name);
       }
     }));
   }
 
-  for (var r in tool.pipe.output) {
-    var links = _PIPED_OUTPUT[r];
+  for (var r in pipe.output) {
+    var links = pipedOutput[r];
     if (links == null) {
       links = <BuildTool>[];
-      _PIPED_OUTPUT[r] = links;
+      pipedOutput[r] = links;
     }
-    links.add(tool);
+    links.add(tm);
 
-    _PIPED_INPUT.forEach((depr, deptools) => deptools.forEach((deptool) {
+    pipedInput.forEach((depr, deptools) => deptools.forEach((deptool) {
       // name check first, to omit the possibly long operation on
       // matches.
-      if (! tool.targetDef.strongDepends.contains(deptool.name) &&
+      if (! tm.targetDef.strongDepends.contains(deptool.name) &&
           r.matches(depr)) {
-        tool.targetDef.strongDepends.add(deptool.name);
+        tm.targetDef.strongDepends.add(deptool.name);
       }
     }));
   }
@@ -563,19 +570,18 @@ final Set<Resource> _CHANGED_RESOURCES = new Set<Resource>();
  * instances that are affected by those changes.
  */
 List<TargetMethod> computeChanges(Project project) {
-  return computeChanges_inner(project, _CHANGED_RESOURCES, _PIPED_INPUT);
+  _CHANGED_RESOURCES.clear();
+  _CHANGED_RESOURCES.addAll(project.changed.entries());
+  _CHANGED_RESOURCES.addAll(project.removed.entries());
+  return computeChanges_inner(_CHANGED_RESOURCES, _PIPED_INPUT);
 }
 
 
 // computeChanges that's designed for testing.
-List<TargetMethod> computeChanges_inner(Project project,
-    Set<Resource> changedResources, Map<Resource,
-    List<TargetMethod>> pipedInput) {
+List<TargetMethod> computeChanges_inner(Set<Resource> changedResources,
+    Map<Resource, List<TargetMethod>> pipedInput) {
   var ret = new Set<TargetMethod>();
-  changedResources.clear();
   var validateStack = <Resource>[];
-  changedResources.addAll(project.changed.entries());
-  changedResources.addAll(project.removed.entries());
   validateStack.addAll(changedResources);
 
   while (! validateStack.isEmpty) {

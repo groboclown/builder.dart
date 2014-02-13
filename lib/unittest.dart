@@ -94,7 +94,6 @@ class BuilderConfiguration extends SimpleConfiguration {
     super.onTestResult(testCase);
 
     _log(testCase.description, testCase.description + " completed");
-
   }
 
   /**
@@ -142,7 +141,7 @@ class BuilderConfiguration extends SimpleConfiguration {
   @override
   void onSummary(int passed, int failed, int errors, List<TestCase> results,
       String uncaughtError) {
-    print("onSummary(${passed}, ${failed}, ${errors}, ${results}, ${uncaughtError})");
+    //print("onSummary(${passed}, ${failed}, ${errors}, ${results}, ${uncaughtError})");
 
     _log("<test-runner>", "Tests completed: " + passed.toString() +
       " passed, " + failed.toString() + " failed, " + errors.toString() +

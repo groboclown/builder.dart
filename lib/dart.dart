@@ -281,7 +281,7 @@ class UnitTests extends BuildTool {
       project.logger.info("nothing to do");
       return new Future<Project>.sync(() => project);
     }
-    print("tests: " + inp.toString());
+    project.logger.debug("tests to run: " + inp.toString());
 
     var errorCounts = <int>[];
     Future runner = null;
@@ -369,7 +369,7 @@ final TestResultWriter JSON_TEST_RESULT_WRITER =
       vals.add(msg.toJson());
     },
     onDone: () {
-      print("*** completed tests for " + testFile.relname + ", received messages count: " + vals.length.toString());
+      //print("*** completed tests for " + testFile.relname + ", received messages count: " + vals.length.toString());
       outfile.writeAsString(JSON.encode(vals));
       completer.complete();
     }

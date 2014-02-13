@@ -57,9 +57,6 @@ import 'dart:async';
  * can be added with the [addPhase()] call.  Additionally, the phases
  * have the "default" target setting, not the tools.
  */
-
-
-
 void build(List<String> args, { libraryName: "build" }) {
   var buildArgs = new BuildArgs.fromCmd(args,
     tool.getTargets(libraryName: libraryName));
@@ -67,7 +64,6 @@ void build(List<String> args, { libraryName: "build" }) {
   var changedTargets = decl.computeChanges(project);
   Future<int> code;
   if (buildArgs.calledTargets.isEmpty && changedTargets.isEmpty) {
-    // TODO see if this should be the "default" target instead.
     code = project.buildTargets( <tool.TargetMethod>[ tool.TARGET_NOOP ] );
   } else if (buildArgs.calledTargets.isEmpty) {
     code = project.buildTargets(changedTargets);

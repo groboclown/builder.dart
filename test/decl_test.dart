@@ -23,19 +23,66 @@
 
 library decl_test;
 
+import 'dart:io';
+import 'package:path/path.dart' as path;
+
 import 'package:builder/unittest.dart';
 import 'package:unittest/vm_config.dart';
 
+import '../lib/src/resource.dart';
 import '../lib/src/decl.dart';
 import '../lib/src/target.dart';
 
 
-/// Test the [computeChanges] method by a commodius vicus of recirculation
-/// back to computeChanges_inner, which is actually made for testing without
+
+/// Test the [_connectPipes] method by calling into the inner method
+/// [connectPipe_internal], which was made for testing without
 /// the global variable overhead.
+/// In the same way, this also tests the [computeChanges] method
+/// by a commodius vicus of recirculation back to
+/// [computeChanges_inner].
+test_connectPipes_changes() {
+  test('simple input-output', () {
+    Map<Resource, List<BuildTool>> pipedInput = {};
+    Map<Resource, List<BuildTool>> pipedOutput = {};
+    var changedResources = new Set<Resource>();
+    var file1 = new FileResource(new File('f'), GLOBAL_CONTEXT, "f");
+    var tool1 = new MockBuildTool("tool1", "tool1",
+      output: [ file1 ]);
+    var tool2 = new MockBuildTool("tool2", "tool2",
+      requiredInput: [ file1 ]);
+
+    connectPipe_internal(tool1, tool1.pipe, pipedInput, pipedOutput);
+
+    expect(tool2.targetDef.strongDepends, unorderedEquals([ tool1.name ]));
+    expect(tool2.targetDef.weakDepends, isEmpty);
+    expect(tool1.targetDef.strongDepends, isEmpty);
+    expect(tool1.targetDef.weakDepends, isEmpty);
+
+    var targets = computeChanges_inner(changedResources, pipedInput);
+    expect(targets, isEmpty);
+
+    changedResources.add(file1);
+    targets = computeChanges_inner(changedResources, pipedInput);
+    expect(targets, unorderedEquals([ tool2 ]));
+  });
+}
+
+
 test_computeChanges() {
   // FIXME
-  test('test 1', () {});
+  test('simple input-output', () {
+    Map<Resource, List<BuildTool>> pipedInput = {};
+    Map<Resource, List<BuildTool>> pipedOutput = {};
+    var changedResources = new Set<Resource>();
+    var file1 = new FileResource(new File('f'), GLOBAL_CONTEXT, "f");
+    var tool1 = new MockBuildTool("tool1", "tool1",
+        output: [ file1 ]);
+    var tool2 = new MockBuildTool("tool2", "tool2",
+        requiredInput: [ file1 ]);
+
+
+  });
 }
 
 
