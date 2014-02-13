@@ -276,7 +276,7 @@ class Exec extends BuildTool {
       requiredInput.addAll(affectedFiles.requiredInput);
       optionalInput.addAll(affectedFiles.optionalInput);
       requiredOutput.addAll(affectedFiles.output);
-      directPipe.putAll(affectedFiles.directPipe);
+      directPipe.addAll(affectedFiles.directPipe);
     }
 
     if (workingDir != null && ! workingDir.exists) {
@@ -382,12 +382,14 @@ class Exec extends BuildTool {
         stderr.addStream(process.stderr);
       }
       if (stdinSrc != null) {
-        var finished = new Completer.sync();
+        var completer = new Completer.sync();
+        Future finished = null;
         try {
           Stream<List<int>> inp = stdinSrc.openRead();
-          finished = pipeStreamSink(finished, inp, process.stdin);
+          finished = pipeStreamSink(completer, inp, process.stdin);
         } catch (e, s) {
-          finished = finished.future.completeError(e, s);
+          completer.completeError(e, s);
+          finished = completer.future;
         }
         futures.add(finished);
       }

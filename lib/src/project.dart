@@ -37,9 +37,6 @@ import 'resource.dart';
 
 /**
  * The current Project definition for the build.
- *
- * TODO use the "path" library, and store a Context object for relative
- * paths.
  */
 class Project {
   final AbstractLogger _baseLogger;
@@ -325,7 +322,6 @@ class Project {
 
 }
 
-// FIXME figure out the right way to use @proxy
 class _ChildProject extends Project {
   final Project _parent;
   final TargetMethod _activeTarget;

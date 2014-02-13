@@ -78,6 +78,6 @@ class DartDocTransformer extends Transformer {
   @override
   Future apply(Transform transform) {
     // FIXME
-    print("should run dartdoc on " + transform.primaryInput);
+    print("should run dartdoc on " + transform.primaryInput.toString());
   }
 }

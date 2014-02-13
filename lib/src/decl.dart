@@ -563,18 +563,26 @@ final Set<Resource> _CHANGED_RESOURCES = new Set<Resource>();
  * instances that are affected by those changes.
  */
 List<TargetMethod> computeChanges(Project project) {
+  return computeChanges_inner(project, _CHANGED_RESOURCES, _PIPED_INPUT);
+}
+
+
+// computeChanges that's designed for testing.
+List<TargetMethod> computeChanges_inner(Project project,
+    Set<Resource> changedResources, Map<Resource,
+    List<TargetMethod>> pipedInput) {
   var ret = new Set<TargetMethod>();
-  _CHANGED_RESOURCES.clear();
+  changedResources.clear();
   var validateStack = <Resource>[];
-  _CHANGED_RESOURCES.addAll(project.changed.entries());
-  _CHANGED_RESOURCES.addAll(project.removed.entries());
-  validateStack.addAll(_CHANGED_RESOURCES);
+  changedResources.addAll(project.changed.entries());
+  changedResources.addAll(project.removed.entries());
+  validateStack.addAll(changedResources);
 
   while (! validateStack.isEmpty) {
     var next = validateStack.removeLast();
-    if (! _CHANGED_RESOURCES.contains(next)) {
-      _CHANGED_RESOURCES.add(next);
-      _PIPED_INPUT.forEach((depres, deptools) {
+    if (! changedResources.contains(next)) {
+      changedResources.add(next);
+      pipedInput.forEach((depres, deptools) {
         if (next.matches(depres)) {
           validateStack.add(depres);
           deptools.forEach((deptool) {
