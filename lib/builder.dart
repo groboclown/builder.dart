@@ -31,7 +31,7 @@ export 'src/decl.dart' show VirtualTarget;
 
 import 'tool.dart' as tool;
 export 'tool.dart' show
-    Pipe, BuildTool, addPhase, getTargets,
+    Pipe, BuildTool, addPhase,
     PHASE_CLEAN, PHASE_BUILD, PHASE_ASSEMBLE, PHASE_DEPLOY;
 export 'src/resource.dart';
 export 'src/failure.dart' show

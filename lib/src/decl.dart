@@ -79,24 +79,27 @@ abstract class Pipe {
    * were no matches, it returns an empty list.
    */
   List<Resource> matchOutput(Resource input) {
-    for (var r in directPipe) {
-      if (input.matches(r)) {
-        return directPipe[r];
-      }
+    List<Resource> ret = <Resource>[];
+    directPipe.keys
+      // Iterable<Resource>
+      .where((Resource r) => input.matches(r))
+      // Iterable<Resource>
+      .map((Resource r) => directPipe[r])
+      // Iterable<Iterable<Resource>>
+      .forEach((Iterable<Resource> rl) => ret.addAll(rl));
+    if (ret.isNotEmpty) {
+      return ret;
     }
 
-    for (var r in requiredInput) {
-      if (input.matches(r)) {
-        return output;
-      }
-    }
-    for (var r in optionalInput) {
-      if (input.matches(r)) {
-        return output;
-      }
+    if (requiredInput.any((Resource r) => input.matches(r))) {
+      return new List<Resource>.from(output);
     }
 
-    return <Resource>[];
+    if (optionalInput.any((Resource r) => input.matches(r))) {
+      return new List<Resource>.from(output);
+    }
+
+    return ret;
   }
 
 
@@ -223,21 +226,25 @@ class SimplePipe extends Pipe {
 }
 
 
+/// For internal use only (unit tests)
+abstract class BuildTool_inner extends TargetMethod {
+  final Pipe pipe;
 
-
+  BuildTool_inner(String name, target targetDef, Pipe pipe) :
+    this.pipe = pipe,
+    super(name, targetDef);
+}
 
 
 /**
  * Top level build tool.
  */
-abstract class BuildTool extends TargetMethod {
+abstract class BuildTool extends BuildTool_inner {
   final TargetMethod phase;
-  final Pipe pipe;
 
   BuildTool(String name, target targetDef, String phase, Pipe pipe) :
       this.phase = _PHASES[phase],
-      this.pipe = pipe,
-      super(name, targetDef) {
+      super(name, targetDef, pipe) {
 
     _addToPhase(phase, this);
 
@@ -252,16 +259,28 @@ abstract class BuildTool extends TargetMethod {
    * Fetch the list of files that have changed, which this tool uses as
    * inputs (either optional or required).  The setup method
    * ([computeChanges()]) must have been called first.
+   *
+   * Use this when the tool uses all the inputs together.  In the situations
+   * where specific subsets of inputs are used for different purposes, use
+   * [findChanged]
    */
   Iterable<Resource> getChangedInputs() {
     var ret = new Set<Resource>();
-    for (var r in pipe.requiredInput) {
-      ret.addAll(_CHANGED_RESOURCES.where((cr) => r.matches(cr)));
-    }
-    for (var r in pipe.optionalInput) {
-      ret.addAll(_CHANGED_RESOURCES.where((cr) => r.matches(cr)));
-    }
+    ret.addAll(pipe.requiredInput.where((r) =>
+      _CHANGED_RESOURCES.any((cr) => cr.matches(r))));
+    ret.addAll(pipe.optionalInput.where((r) =>
+      _CHANGED_RESOURCES.any((cr) => cr.matches(r))));
     return ret;
+  }
+
+
+  /**
+   * Returns just the resources in the list which changed.  Use this method
+   * rather than [getChangedInputs] when you need a specific sub-set of files,
+   * instead of all the input files.
+   */
+  Iterable<Resource> findChanged(Iterable<Resource> rlist) {
+    return rlist.where((r) => _CHANGED_RESOURCES.any((cr) => cr.matches(r)));
   }
 
 
@@ -500,30 +519,30 @@ TargetMethod addPhase(String phaseName, String topTargetName,
 }
 
 
-final Map<Resource, List<BuildTool>> _PIPED_OUTPUT =
-  <Resource, List<BuildTool>>{};
-final Map<Resource, List<BuildTool>> _PIPED_INPUT =
-  <Resource, List<BuildTool>>{};
+final Map<Resource, List<BuildTool_inner>> _PIPED_OUTPUT =
+  <Resource, List<BuildTool_inner>>{};
+final Map<Resource, List<BuildTool_inner>> _PIPED_INPUT =
+  <Resource, List<BuildTool_inner>>{};
 
 
 
 void _connectPipes(BuildTool tool) {
-  connectPipe_internal(tool, tool.pipe, _PIPED_INPUT, _PIPED_OUTPUT);
+  connectPipe_internal(tool, _PIPED_INPUT, _PIPED_OUTPUT);
 }
 
 
-void connectPipe_internal(TargetMethod tm, Pipe pipe,
-    Map<Resource, List<BuildTool>> pipedInput,
-    Map<Resource, List<BuildTool>> pipedOutput) {
+void connectPipe_internal(BuildTool_inner tm,
+    Map<Resource, List<BuildTool_inner>> pipedInput,
+    Map<Resource, List<BuildTool_inner>> pipedOutput) {
   // optionalInput is not connected int the piped input.
 
   // The "Reource" cannot use the "match" in the global piped* structures,
   // because they may not be correctly equal.
 
-  for (var r in pipe.requiredInput) {
+  for (var r in tm.pipe.requiredInput) {
     var links = pipedInput[r];
     if (links == null) {
-      links = <BuildTool>[];
+      links = <BuildTool_inner>[];
       pipedInput[r] = links;
     }
     links.add(tm);
@@ -531,37 +550,38 @@ void connectPipe_internal(TargetMethod tm, Pipe pipe,
     // This is fairly inefficient.  A better data structure could tune down
     // the amount of loops in loops.
 
-    pipedOutput.forEach((depr, deptools) => deptools.forEach((deptool) {
+    pipedOutput.forEach((depr, deptools) => deptools.forEach((BuildTool_inner deptool) {
       // name check first, to omit the possibly long operation on
       // matches.
       if (! deptool.targetDef.strongDepends.contains(tm.name) &&
           depr.matches(r)) {
-        deptool.targetDef.strongDepends.add(tm.name);
+        tm.targetDef.strongDepends.add(deptool.name);
       }
     }));
   }
 
-  for (var r in pipe.output) {
+  //print("${tm} pipe output: ${tm.pipe.output}");
+  for (var r in tm.pipe.output) {
     var links = pipedOutput[r];
     if (links == null) {
-      links = <BuildTool>[];
+      links = <BuildTool_inner>[];
       pipedOutput[r] = links;
     }
     links.add(tm);
 
-    pipedInput.forEach((depr, deptools) => deptools.forEach((deptool) {
-      // name check first, to omit the possibly long operation on
-      // matches.
+    pipedInput.forEach((depr, deptools) => deptools.forEach((BuildTool_inner deptool) {
+      // name check first, to omit the possibly long operation on matches.
       if (! tm.targetDef.strongDepends.contains(deptool.name) &&
           r.matches(depr)) {
-        tm.targetDef.strongDepends.add(deptool.name);
+        deptool.targetDef.strongDepends.add(tm.name);
       }
     }));
   }
 }
 
 
-final Set<Resource> _CHANGED_RESOURCES = new Set<Resource>();
+final _CHANGED_RESOURCES = new Set<Resource>();
+
 
 
 /**
@@ -577,28 +597,34 @@ List<TargetMethod> computeChanges(Project project) {
 }
 
 
+
 // computeChanges that's designed for testing.
-List<TargetMethod> computeChanges_inner(Set<Resource> changedResources,
-    Map<Resource, List<TargetMethod>> pipedInput) {
-  var ret = new Set<TargetMethod>();
-  var validateStack = <Resource>[];
-  validateStack.addAll(changedResources);
+List<BuildTool_inner> computeChanges_inner(Set<Resource> changedFiles,
+    Map<Resource, List<BuildTool_inner>> pipedInput) {
+  var validateStack = new List<Resource>.from(changedFiles);
+  var ret = new Set<BuildTool_inner>();
+  var seenFiles = new Set<Resource>();
 
   while (! validateStack.isEmpty) {
     var next = validateStack.removeLast();
-    if (! changedResources.contains(next)) {
-      changedResources.add(next);
-      pipedInput.forEach((depres, deptools) {
+    if (! seenFiles.contains(next)) {
+      seenFiles.add(next);
+      changedFiles.add(next);
+      //print("X- ${next}...");
+      pipedInput.forEach((Resource depres, List<BuildTool_inner> deptools) {
+        //print("X-- checking ${depres}");
         if (next.matches(depres)) {
           validateStack.add(depres);
-          deptools.forEach((deptool) {
+          deptools.forEach((BuildTool_inner deptool) {
             ret.add(deptool);
-            validateStack.addAll(deptool.pipe.matchOutput(next));
+            var matched = deptool.pipe.matchOutput(next);
+            //print("X--- match on " + deptool.name);
+            validateStack.addAll(matched);
           });
         }
       });
     }
   }
 
-  return new List<TargetMethod>.from(ret);
+  return new List<BuildTool_inner>.from(ret);
 }

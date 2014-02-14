@@ -320,6 +320,9 @@ class UnitTests extends BuildTool {
     // signal when the unittest is *reallY* complete.  Unfortunately, because
     // of the way that unittests may be async, this is far from trivial.
 
+    // FIXME this currently hangs if the invoked isolate crashes before tests
+    // run, such as due to compilation problems.
+
 
     var remote = Isolate.spawnUri(Uri.parse(test.relname),
         testArgs, response.sendPort)

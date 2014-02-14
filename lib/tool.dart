@@ -49,7 +49,7 @@ export 'src/exceptions.dart' show
 
 import 'src/decl.dart' as decl;
 export 'src/decl.dart' show
-  BuildTool, Pipe, addPhase;
+  BuildTool, Pipe, addPhase, changedResourcesIn;
 
 //import 'src/logger.dart';
 export 'src/logger.dart' show
