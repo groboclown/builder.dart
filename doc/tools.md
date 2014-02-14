@@ -6,3 +6,33 @@ of builds.
 
 
 
+
+
+Delete
+------
+
+*import 'package:builder/std.dart*
+
+
+MkDir
+-----
+
+*import 'package:builder/std.dart*
+
+
+Exec
+----
+
+*import 'package:builder/std.dart*
+
+
+DartAnalyzer
+------------
+
+*import 'package:builder/dart.dart*
+
+
+UnitTests
+---------
+
+*import 'package:builder/dart.dart*

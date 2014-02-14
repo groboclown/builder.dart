@@ -317,11 +317,23 @@ class UnitTests extends BuildTool {
     // because of the way that the unittest code is written (it spawns off the
     // tests after the main method finishes), while the isolate's Future returns
     // when the main thread completes.  To work around this, we need a way to
-    // signal when the unittest is *reallY* complete.  Unfortunately, because
+    // signal when the unittest is *really* complete.  Unfortunately, because
     // of the way that unittests may be async, this is far from trivial.
 
     // FIXME this currently hangs if the invoked isolate crashes before tests
     // run, such as due to compilation problems.
+
+    // Looks like the Isolate should support microtasks, but there's an open
+    // bug on it:
+    // http://code.google.com/p/dart/issues/detail?id=14906
+    // If that bug gets fixed, and this problem is still seen, then open a
+    // new issue.  Changing the code if fixed would mean removing the special
+    // message passing for notices on
+
+    // Also of note, these bugs:
+    // http://code.google.com/p/dart/issues/detail?id=15348
+    // http://code.google.com/p/dart/issues/detail?id=15617
+
 
 
     var remote = Isolate.spawnUri(Uri.parse(test.relname),
