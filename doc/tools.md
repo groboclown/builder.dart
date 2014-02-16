@@ -13,6 +13,9 @@ Delete
 
 *import 'package:builder/std.dart*
 
+Deletes files and directories based on a [ResourceCollection].
+
+
 
 MkDir
 -----
@@ -36,3 +39,21 @@ UnitTests
 ---------
 
 *import 'package:builder/dart.dart*
+
+
+
+
+Data Types
+==========
+
+builder.dart uses a set of custom data types used by the various tools.  A few
+are specific to certain tools, while others are generally used by all the
+tools.
+
+
+Resource
+--------
+
+A [Resource] object references streamable object or a container for streamable
+objects.  Commonly, this refers to files and directories, but can also refer
+to URI network resources.
