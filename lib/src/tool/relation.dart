@@ -65,7 +65,11 @@ class Relationship extends BuildTool {
               t.translator));
     }
 
-    Pipe pipe = new Pipe.direct(mapping);
+    // Don't use Pipe.direct, because that creates a required relationship.
+    // We want an optional relationship instead, as that puts the stand-alone
+    // direct pipe sources into the optional inputs.
+    Pipe pipe = new Pipe.all(directPipe: mapping,
+      optionalInput: mapping.keys);
 
     var targetDef = BuildTool.mkTargetDef(name, description, phase, pipe,
         <String>[], <String>[]);
@@ -282,7 +286,7 @@ TranslatePath globTranslator(String src, String dest,
           (destParts[destPos].indexOf("*") < 0 &&
             destParts[destPos].indexOf("%") < 0);
           ++destPos) {
-        print("consume dest [${destParts[destPos]}");
+        //print("consume dest [${destParts[destPos]}");
         out.add(destParts[destPos]);
       }
 
@@ -298,27 +302,27 @@ TranslatePath globTranslator(String src, String dest,
           p = p.toLowerCase();
         }
         if (s != p) {
-          print("incorrect match: src[$srcPos] ($s) != p[$pPos] ($p)");
+          //print("incorrect match: src[$srcPos] ($s) != p[$pPos] ($p)");
           return null;
         }
-        print("match src [${srcParts[srcPos]}] to p [${pParts[pPos]}]");
+        //print("match src [${srcParts[srcPos]}] to p [${pParts[pPos]}]");
       }
 
       if (destPos >= destParts.length) {
         if (srcPos >= srcParts.length) {
           // correct end of the matching
-          print("end of matching");
+          //print("end of matching");
           return path.joinAll(out);
         }
-        print("dest path length does not match up with the source path length for p");
+        //print("dest path length does not match up with the source path length for p");
         return null;
       }
       if (srcPos >= srcParts.length) {
-        print("src path length does not match up with the dest path length for p");
+        //print("src path length does not match up with the dest path length for p");
         return null;
       }
       if (pPos >= pParts.length) {
-        print("parts path length is longer than source path length");
+        //print("parts path length is longer than source path length");
         return null;
       }
 
@@ -326,7 +330,7 @@ TranslatePath globTranslator(String src, String dest,
       if (srcParts[srcPos] == "**") {
         // matcher of an arbitrary number of directories.
         if (destParts[destPos] != "**" && destParts[destPos] != "%%") {
-          print("multi-directory matcher does not match up for dest and src for p");
+          //print("multi-directory matcher does not match up for dest and src for p");
           return null;
         }
 
@@ -336,7 +340,7 @@ TranslatePath globTranslator(String src, String dest,
           assert(destParts[destPos] == "**");
           assert(destPos == destParts.length - 1);
           for (; pPos < pParts.length; ++pPos) {
-            print("move p [${pParts[pPos]}] for **");
+            //print("move p [${pParts[pPos]}] for **");
             out.add(pParts[pPos]);
           }
           return path.joinAll(out);
@@ -350,10 +354,10 @@ TranslatePath globTranslator(String src, String dest,
         for (; pPos < pParts.length; ++pPos) {
           var translate = translatePathStars(srcParts[srcPos],
             destParts[destPos], pParts[pPos]);
-          print("match for [${srcParts[srcPos]}], [${destParts[destPos]}], to [${pParts[pPos]}], as [${translate}]");
+          //print("match for [${srcParts[srcPos]}], [${destParts[destPos]}], to [${pParts[pPos]}], as [${translate}]");
           if (translate != null) {
             // match on the part after the **
-            print("match on part ${pParts[pPos]} after **");
+            //print("match on part ${pParts[pPos]} after **");
             out.add(translate);
 
             ++pPos;
@@ -365,38 +369,38 @@ TranslatePath globTranslator(String src, String dest,
                 if (pPos >= pParts.length) {
                   return path.joinAll(out);
                 }
-                print("pParts remainder after end of matcher");
+                //print("pParts remainder after end of matcher");
                 return null;
               }
-              print("destParts remainder after end of src matcher");
+              //print("destParts remainder after end of src matcher");
               return null;
             }
 
             break;
           }
           if (useP) {
-            print("move p [${pParts[pPos]}] for **");
+            //print("move p [${pParts[pPos]}] for **");
             out.add(pParts[pPos]);
           }
         }
         if (pPos >= pParts.length) {
-          print("mismatch of p against src for multi-directory matcher");
+          //print("mismatch of p against src for multi-directory matcher");
           return null;
         }
       } else {
         // star matcher.
         if (destParts[destPos] == "**" || destParts[destPos] == "%%") {
-          print("single directory matcher does not match up for dest and src for p");
+          //print("single directory matcher does not match up for dest and src for p");
           return null;
         }
 
         var translate = translatePathStars(srcParts[srcPos],
           destParts[destPos], pParts[pPos]);
         if (translate == null) {
-          print("single directory matcher did not match on ${pParts[pPos]}");
+          //print("single directory matcher did not match on ${pParts[pPos]}");
           return null;
         }
-        print("match star for [${srcParts[srcPos]}], [${destParts[destPos]}], to [${pParts[pPos]}], as [${translate}]");
+        //print("match star for [${srcParts[srcPos]}], [${destParts[destPos]}], to [${pParts[pPos]}], as [${translate}]");
         out.add(translate);
 
         srcPos++;

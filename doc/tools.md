@@ -29,6 +29,20 @@ Exec
 *import 'package:builder/std.dart*
 
 
+Relationship
+------------
+
+*included in `builder/std.dart`*
+
+**Useful only for declarative builds.**
+
+Defines an indirect relationship between one set of files and another.  For
+example, in interpreted languages (such as Dart), the unit test execution only
+directly depends upon the unit tests, because those are the files that it runs.
+However, those unit tests have their own relationship to the source files that
+they test.  This relationship can be described in a [Relationship] target.
+
+
 DartAnalyzer
 ------------
 
@@ -57,3 +71,15 @@ Resource
 A [Resource] object references streamable object or a container for streamable
 objects.  Commonly, this refers to files and directories, but can also refer
 to URI network resources.
+
+_TODO add more info about usage of a resource._
+
+
+ResourceCollection
+------------------
+
+Simply put, a [ResourceCollection] contains a set of [Resources].  Unlike a
+[ResourceListable], it does not allow for direct interaction with the underlying
+resources.
+
+

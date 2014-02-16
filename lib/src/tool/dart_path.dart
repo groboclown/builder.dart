@@ -24,7 +24,7 @@
 library builder.src.tool.dart_path;
 
 /**
- * Methods to invoke the commands distributed with the dart sdk.
+ * Defines paths related to dart's SDK.
  */
 
 import 'dart:io';

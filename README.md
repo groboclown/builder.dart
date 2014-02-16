@@ -239,6 +239,11 @@ tools will create directories as necessary.  However, under some circumstances,
 you may need an empty directory created.
 
 
+Relationship
+------------
+*included in `builder/std.dart`*
+
+
 DartAnalyzer
 ------------
 *included in `builder/dart.dart`*
@@ -247,7 +252,6 @@ DartAnalyzer
 UnitTests
 ---------
 *included in `builder/dart.dart`*
-
 
 
 Making Your Own Tool
