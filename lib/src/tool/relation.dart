@@ -24,12 +24,11 @@
 
 library builder.src.tool.dart;
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:path/path.dart' as path;
-import '../decl.dart';
-import '../resource.dart';
-import '../project.dart';
+import '../../tool.dart';
 
 /**
  * Creates a relationship between files to have an implication of file
@@ -38,23 +37,52 @@ import '../project.dart';
  * source file.
  */
 class Relationship extends BuildTool {
-  static int _relationshipCount = 0;
-
   factory Relationship(String name,
-      { String description: "", Map<Resource, Resource> mapper}) {
+      { String description: "", String phase: PHASE_BUILD,
+      TranslatePath translator: null,
+      ResourceListable src: null, ResourceListable dest: null,
+      List<PathTranslator> translators: null }) {
 
-    assert(mapper != null);
+    var res = <PathTranslator>[];
 
+    if (translator != null) {
+      assert(src != null);
+      assert(dest != null);
+      res.add(new PathTranslator(src, dest, translator));
+    }
 
+    if (translators != null) {
+      res.addAll(translators);
+    }
 
+    Map<Resource, List<Resource>> mapping = <Resource, List <Resource>>{};
+    for (PathTranslator t in res) {
+      if (! mapping.containsKey(t.srcLocation)) {
+        mapping[t.srcLocation] = <Resource>[];
+      }
+      mapping[t.srcLocation].add(
+          new TranslateResourceListable(t.srcLocation, t.destLocation,
+              t.translator));
+    }
 
+    Pipe pipe = new Pipe.direct(mapping);
+
+    var targetDef = BuildTool.mkTargetDef(name, description, phase, pipe,
+        <String>[], <String>[]);
+
+    return new Relationship._(name, targetDef, phase, pipe);
   }
 
 
 
-  Relationship._(String name, target targetDef, Pipe pipe) :
-    super(name, targetDef, pipe);
+  Relationship._(String name, target targetDef, String phase, Pipe pipe) :
+    super(name, targetDef, phase, pipe);
 
+
+  @override
+  Future<Project> start(Project project) {
+    return new Future<Project>.value(() => project);
+  }
 }
 
 
@@ -64,6 +92,119 @@ class Relationship extends BuildTool {
  * the translation, or the translated path.
  */
 typedef String TranslatePath(String srcPath);
+
+
+/**
+ * Contains the translation from the [source] to the [target].  Neither can
+ * be `null`.
+ */
+class PathTranslated {
+  final Resource source;
+  final Resource target;
+
+  PathTranslated(this.source, this.target) {
+    assert(source != null);
+    assert(target != null);
+  }
+}
+
+
+class PathTranslator {
+  final ResourceListable srcLocation;
+  final ResourceListable destLocation;
+  final TranslatePath translator;
+
+  const PathTranslator(this.srcLocation, this.destLocation, this.translator);
+
+  Iterable<PathTranslated> list() {
+    return srcLocation.list().map((s) {
+      var rels = srcLocation.relativeChildName(s);
+      var trans = translator(rels);
+      if (trans == null) {
+        return null;
+      }
+      return new PathTranslated(s, destLocation.child(trans));
+    }).where((p) => p != null);
+  }
+}
+
+
+
+/**
+ * A [ResourceListable] that has its contents as the translated source
+ * resources.
+ */
+class TranslateResourceListable<T extends Resource> extends ResourceListable {
+  final ResourceListable srcLocation;
+  final ResourceListable<T> destLocation;
+  final TranslatePath translator;
+
+  TranslateResourceListable(this.srcLocation, this.destLocation,
+      this.translator);
+
+  @override
+  String get name => destLocation.name;
+
+  @override
+  String get relname => destLocation.relname;
+
+  @override
+  String get absolute => destLocation.absolute;
+
+  @override
+  bool get readable => destLocation.readable;
+
+  @override
+  bool get writable => destLocation.writable;
+
+  @override
+  bool get exists => destLocation.exists;
+
+  @override
+  ResourceListable get parent => destLocation.parent;
+
+  @override
+  path.Context get context => destLocation.context;
+
+  @override
+  bool delete(bool recursive) => destLocation.delete(recursive);
+
+  // here, we just check if this "other" is contained in the destination.
+  // it doesn't match against the source, because the source is not contained
+  // in this!
+  @override
+  bool contains(Resource other) => destLocation.contains(other);
+
+  @override
+  string relativeChildName(Resource child) => destLocation.relativeChildName(child);
+
+  @override
+  List<T> list() {
+    return srcLocation.list().map((s) {
+      var rels = srcLocation.relativeChildName(s);
+      var trans = translator(rels);
+      if (trans == null) {
+        return null;
+      }
+      return destLocation.child(trans);
+    }).where((s) => s != null);
+  }
+
+  @override
+  T child(String name) {
+    var trans = translator(name);
+    if (trans == null) {
+      return null;
+    }
+    return destLocation.child(trans);
+  }
+}
+
+
+
+
+
+
 
 /**
  * Uses "*" and "**" as glob placements in the source.  The number of glob
@@ -77,7 +218,7 @@ typedef String TranslatePath(String srcPath);
  */
 TranslatePath globTranslator(String src, String dest,
     [ path.Context context = null, bool caseSensitive = null ]) {
-  assert(_count(src, "*") == _count(dest, "*"));
+  assert(_count(src, "*") == _count(dest, "*") + _count(dest, "%"));
   if (context == null) {
     context = new path.Context(style: path.style);
   }
@@ -90,7 +231,7 @@ TranslatePath globTranslator(String src, String dest,
   assert(destParts.isNotEmpty);
 
   String translatePathStars(String src, String dest, String actual) {
-    int starCount = _count(src, "*");
+    int starCount = 0;
     var srcRegExp = "";
     for (int i = 0; i < src.length; i++) {
       if ((src.codeUnitAt(i) >= 'a'.codeUnitAt(0) && src.codeUnitAt(i) <= 'z'.codeUnitAt(0)) ||
@@ -105,7 +246,6 @@ TranslatePath globTranslator(String src, String dest,
       }
     }
 
-    // FIXME include case sensitivity flag
     var re = new RegExp("^" + srcRegExp + "\$", caseSensitive: caseSensitive);
     var m = re.firstMatch(actual);
     if (m == null) {
@@ -117,6 +257,8 @@ TranslatePath globTranslator(String src, String dest,
     for (int i = 0; i < dest.length; ++i) {
       if (dest[i] == "*") {
         ret += m[group++];
+      } else if (dest[i] == "%") {
+        // ignore it
       } else {
         ret += dest[i];
       }
@@ -134,96 +276,132 @@ TranslatePath globTranslator(String src, String dest,
     var pPos = 0;
 
     while (true) {
-      print("srcParts[$srcPos]=[${srcParts[srcPos]}]");
-      print("destParts[$destPos]=[${destParts[destPos]}]");
-      print("pParts[$pPos]=[${pParts[pPos]}]");
-      if (srcParts[srcPos] == "**") {
-        // put in place of the "**" the destination path up to its "**".
-        for (; destPos < destParts.length &&
-            destParts[destPos] != "**"; ++destPos) {
-          assert(destParts[destPos].indexOf("*") < 0);
-          out.add(destParts[destPos]);
-        }
-
-        // destPos && srcPos both point to **, or destPos is at the end of
-        // the string.
-
-        if (srcPos >= srcParts.length - 1) {
-          // ending with double star
-          assert(destPos >= destPos.length - 1);
-          for (; pPos < pParts.length; ++pPos) {
-            out.add(pParts[pPos]);
-          }
-          break;
-        }
-
-        assert(srcParts[srcPos] != "**");
-
-        // swallow up pPos paths until the first match with dest
-        // FIXME this should use translatePathStars above
-        for (; pPos < pParts.length &&
-            pParts[pPos] != srcParts[srcPos + 1]; ++pPos) {
-          // do nothing - we're incrementing and testing in the for statement.
-        }
-        if (pPos >= pParts.length) {
-          // not a match - too much consumed
-          return null;
-        }
-
-
-        // FIXME what next?
-
-        assert(destPos < destParts.length);
-      } else if (_count(srcParts[srcPos], "*") > 0) {
-        assert(_count(srcParts[srcPos], "**") <= 0);
-        for (; destPos < destParts.length && _count(destParts[destPos], "*") <= 0; ++destPos) {
-          // the check and inc is done in the for loop.
-          out.add(destParts[destPos]);
-        }
-        assert(_count(destParts[destPos], "**") <= 0);
-        var tr = translatePathStars(srcParts[srcPos], destParts[destPos], pParts[pPos]);
-        if (tr == null) {
-          // not a match
-          return null;
-        }
-        ++srcPos;
-        ++destPos;
-        ++pPos;
-      } else if (_count(destParts[destPos], "*") > 0) {
-        for (; srcPos < srcParts.length; ++srcPos) {
-          if (_count(srcParts[srcPos], "*") > 0) {
-            break;
-          }
-          if (srcParts[srcPos] != pParts[pPos]) {
-            // not a match
-            return null;
-          }
-          ++pPos;
-        }
-        assert(_count(srcParts[srcPos], "**") <= 0);
-        var tr = translatePathStars(srcParts[srcPos], destParts[destPos],
-        pParts[pPos]);
-        if (tr == null) {
-          // not a match
-          return null;
-        }
-        ++srcPos;
-        ++destPos;
-        ++pPos;
-      } else {
-        if (pParts[pPos] != srcParts[srcPos]) {
-          // not a match
-          return null;
-        }
-        ++srcPos;
+      // First - move all the destination parts, up to anything with a matcher,
+      // into the output list.
+      for (; destPos < destParts.length &&
+          (destParts[destPos].indexOf("*") < 0 &&
+            destParts[destPos].indexOf("%") < 0);
+          ++destPos) {
+        print("consume dest [${destParts[destPos]}");
+        out.add(destParts[destPos]);
       }
 
-      if (srcPos >= srcParts.length) {
-        // end of the search.
-        for (; destPos < destParts.length; ++destPos) {
-          out.add(destParts[destPos]);
+      // Next, move through the source until it reaches a matcher, comparing it
+      // to the pParts list.  If it's a mismatch, then the pParts is not valid
+      // for this translation.
+      for (; srcPos < srcParts.length && pPos < pParts.length &&
+          (srcParts[srcPos].indexOf("*") < 0); ++srcPos, ++pPos) {
+        var s = srcParts[srcPos];
+        var p = pParts[pPos];
+        if (! caseSensitive) {
+          s = s.toLowerCase();
+          p = p.toLowerCase();
         }
-        return path.joinAll(out);
+        if (s != p) {
+          print("incorrect match: src[$srcPos] ($s) != p[$pPos] ($p)");
+          return null;
+        }
+        print("match src [${srcParts[srcPos]}] to p [${pParts[pPos]}]");
+      }
+
+      if (destPos >= destParts.length) {
+        if (srcPos >= srcParts.length) {
+          // correct end of the matching
+          print("end of matching");
+          return path.joinAll(out);
+        }
+        print("dest path length does not match up with the source path length for p");
+        return null;
+      }
+      if (srcPos >= srcParts.length) {
+        print("src path length does not match up with the dest path length for p");
+        return null;
+      }
+      if (pPos >= pParts.length) {
+        print("parts path length is longer than source path length");
+        return null;
+      }
+
+      // Now we're at a matcher
+      if (srcParts[srcPos] == "**") {
+        // matcher of an arbitrary number of directories.
+        if (destParts[destPos] != "**" && destParts[destPos] != "%%") {
+          print("multi-directory matcher does not match up for dest and src for p");
+          return null;
+        }
+
+        if (srcPos == srcParts.length - 1) {
+          // special case - last is **
+          // last part cannot be "%%"
+          assert(destParts[destPos] == "**");
+          assert(destPos == destParts.length - 1);
+          for (; pPos < pParts.length; ++pPos) {
+            print("move p [${pParts[pPos]}] for **");
+            out.add(pParts[pPos]);
+          }
+          return path.joinAll(out);
+        }
+
+        // swallow up pParts until it matches the next srcPos.
+        ++srcPos;
+        assert(srcParts[srcPos] != "**");
+        var useP = (destParts[destPos] == "**");
+        ++destPos;
+        for (; pPos < pParts.length; ++pPos) {
+          var translate = translatePathStars(srcParts[srcPos],
+            destParts[destPos], pParts[pPos]);
+          print("match for [${srcParts[srcPos]}], [${destParts[destPos]}], to [${pParts[pPos]}], as [${translate}]");
+          if (translate != null) {
+            // match on the part after the **
+            print("match on part ${pParts[pPos]} after **");
+            out.add(translate);
+
+            ++pPos;
+            ++srcPos;
+            ++destPos;
+
+            if (srcPos >= srcParts.length) {
+              if (destPos >= destParts.length) {
+                if (pPos >= pParts.length) {
+                  return path.joinAll(out);
+                }
+                print("pParts remainder after end of matcher");
+                return null;
+              }
+              print("destParts remainder after end of src matcher");
+              return null;
+            }
+
+            break;
+          }
+          if (useP) {
+            print("move p [${pParts[pPos]}] for **");
+            out.add(pParts[pPos]);
+          }
+        }
+        if (pPos >= pParts.length) {
+          print("mismatch of p against src for multi-directory matcher");
+          return null;
+        }
+      } else {
+        // star matcher.
+        if (destParts[destPos] == "**" || destParts[destPos] == "%%") {
+          print("single directory matcher does not match up for dest and src for p");
+          return null;
+        }
+
+        var translate = translatePathStars(srcParts[srcPos],
+          destParts[destPos], pParts[pPos]);
+        if (translate == null) {
+          print("single directory matcher did not match on ${pParts[pPos]}");
+          return null;
+        }
+        print("match star for [${srcParts[srcPos]}], [${destParts[destPos]}], to [${pParts[pPos]}], as [${translate}]");
+        out.add(translate);
+
+        srcPos++;
+        destPos++;
+        pPos++;
       }
     }
   };

@@ -250,6 +250,13 @@ abstract class ResourceListable<T extends Resource> extends Resource {
    * method returns `null`.
    */
   T child(String name);
+
+
+  /**
+   * Returns the path of the [child] relative to this listable.  If the
+   * [child]] is not actually a child, then this will return `null`.
+   */
+  String relativeChildName(Resource child);
 }
 
 
@@ -707,10 +714,22 @@ class DirectoryResource extends FileEntityResource<FileSystemEntity>
     if (r == this) {
       return true;
     }
-    return list().any((kid) => kid.contains(r));
+    return context.isWithin(absolute, r.absolute);
   }
 
 
+  @override
+  String relativeChildName(Resource child) {
+    if (context.isWithin(absolute, child.absolute)) {
+      return context.relative(child.absolute, from: absolute);
+    }
+    return null;
+  }
+
+
+  /**
+   * Return this directory resource as a collection.
+   */
   ResourceCollection asCollection({ ResourceTest resourceTest,
       ResourceTest recurseTest, bool addDirectories: false }) {
     return new DirectoryCollection(this,
@@ -718,10 +737,13 @@ class DirectoryResource extends FileEntityResource<FileSystemEntity>
   }
 
 
+  /**
+   * Return this directory resource as a collection of every file in the
+   * directory.
+   */
   ResourceCollection everything() {
     return new DirectoryCollection.everything(this);
   }
-
 
 }
 

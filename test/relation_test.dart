@@ -25,23 +25,27 @@ library project_test;
 
 import 'package:builder/unittest.dart';
 import 'package:unittest/vm_config.dart';
+import 'package:path/path.dart' as path;
 
 import '../lib/src/tool/relation.dart';
 
 test_GlobTranslator() {
   group("globTranslator", () {
-    test('single-star, no path', () {
+    test('single-star, no path', () =>
       expect(globTranslator("*.java", "*.class")("A.java"),
-        equals("A.class"));
-    });
-    test('single-star, simple path', () {
+        equals("A.class")));
+    test('single-star, simple path', () =>
       expect(globTranslator("a/*.java", "b/*.class")("a/A.java"),
-      equals("b/A.class"));
-    });
-    test('single-star, no match', () {
+        equals(path.join("b", "A.class"))));
+    test('single-star, no match', () =>
       expect(globTranslator("*.java", "*.class")("A.dart"),
-      equals(null));
-    });
+        equals(null)));
+    test('initial double-star, no path', () =>
+      expect(globTranslator("**/a.tar", "a/**/b.zip")("b/c/a.tar"),
+        equals(path.join("a", "b", "c", "b.zip"))));
+    test('end double star', () =>
+      expect(globTranslator("a/b/**", "c/**")("a/b/d/e"),
+        equals(path.join("c", "d", "e"))));
   });
 }
 

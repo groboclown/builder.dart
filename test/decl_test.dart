@@ -23,6 +23,7 @@
 
 library decl_test;
 
+import 'dart:async';
 import 'dart:io';
 import 'package:path/path.dart' as path;
 
@@ -32,6 +33,7 @@ import 'package:unittest/vm_config.dart';
 import '../lib/src/resource.dart';
 import '../lib/src/decl.dart';
 import '../lib/src/target.dart';
+import '../lib/src/project.dart';
 
 
 
