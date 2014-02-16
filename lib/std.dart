@@ -35,6 +35,8 @@ export 'tool.dart' show Pipe;
 import 'dart:io';
 import 'dart:async';
 
+export 'src/tool/relation.dart';
+
 ResourceTest DART_FILE_FILTER = (r) =>
   (r.exists && DEFAULT_IGNORE_TEST(r) && r.name.toLowerCase().endsWith(".dart"));
 

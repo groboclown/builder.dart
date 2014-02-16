@@ -46,6 +46,15 @@ test_GlobTranslator() {
     test('end double star', () =>
       expect(globTranslator("a/b/**", "c/**")("a/b/d/e"),
         equals(path.join("c", "d", "e"))));
+    test('match on double-star matching nothing', () =>
+      expect(globTranslator("a/**/b.test", "**/w")("a/b.test"),
+        equals("w")));
+    test('exclude double-star', () =>
+      expect(globTranslator("a/**/b.test", "q/v/%%/x.x")("a/e/f/g/b.test"),
+        equals(path.join("q", "v", "x.x"))));
+    test('exclude single star', () =>
+      expect(globTranslator("a*b.test", "q%d.class")("a123b.test"),
+        equals("qd.class")));
   });
 }
 

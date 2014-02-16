@@ -36,6 +36,11 @@ final DirectoryResource OUTPUT_DIR = new FileEntityResource.asDir(".work/");
 final DirectoryResource TEST_SUMMARY_DIR =
   OUTPUT_DIR.child("test-results/");
 
+// File mapping
+final unitTestSources = new Relationship("src-to-tests",
+    description: "Unit tests covering source files",
+    src: LIB_DIR, dest: TEST_DIR,
+    translator: globTranslator("**/*.dart", "%%/*_test.dart"));
 
 
 // --------------------------------------------------------------------

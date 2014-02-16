@@ -81,7 +81,7 @@ class Relationship extends BuildTool {
 
   @override
   Future<Project> start(Project project) {
-    return new Future<Project>.value(() => project);
+    return new Future<Project>.value(project);
   }
 }
 
