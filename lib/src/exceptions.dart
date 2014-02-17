@@ -24,7 +24,7 @@
 
 library builder.src.exceptions;
 
-import 'target.dart';
+import 'targetmethod.dart';
 
 class BuildException implements Exception {
   final String message;

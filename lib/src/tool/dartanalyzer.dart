@@ -93,7 +93,7 @@ class DartAnalyzer extends BuildTool {
   }
 
 
-  DartAnalyzer._(String name, target targetDef, String phase, Pipe pipe,
+  DartAnalyzer._(String name, TargetDef targetDef, String phase, Pipe pipe,
       String cmd, DirectoryResource packageRoot, FailureMode onFailure,
       FailureMode onWarning, FailureMode onInfo) :
   this.cmd = cmd, this.packageRoot = packageRoot,

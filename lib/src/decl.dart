@@ -32,7 +32,7 @@ import 'dart:mirrors';
 import 'dart:async';
 
 import 'resource.dart';
-import 'target.dart';
+import 'targetmethod.dart';
 import 'exceptions.dart';
 import 'project.dart';
 import 'pipe.dart';
@@ -44,7 +44,7 @@ export 'pipe.dart';
 abstract class BuildTool_inner extends TargetMethod {
   final Pipe pipe;
 
-  BuildTool_inner(String name, target targetDef, Pipe pipe) :
+  BuildTool_inner(String name, TargetDef targetDef, Pipe pipe) :
     this.pipe = pipe,
     super(name, targetDef);
 }
@@ -60,7 +60,7 @@ abstract class BuildTool_inner extends TargetMethod {
 abstract class BuildTool extends BuildTool_inner {
   final TargetMethod phase;
 
-  BuildTool(String name, target targetDef, String phase, Pipe pipe) :
+  BuildTool(String name, TargetDef targetDef, String phase, Pipe pipe) :
       this.phase = _PHASES[phase],
       super(name, targetDef, pipe) {
 
@@ -108,7 +108,7 @@ abstract class BuildTool extends BuildTool_inner {
    * in passing to the [BuildTool] constructor.  It does not wire anything up
    * to the [BuildTool] instance.
    */
-  static target mkTargetDef(String name, String description,
+  static TargetDef mkTargetDef(String name, String description,
       String phase, Pipe pipe, Iterable<String> dependencies,
       Iterable<String> weakDependencies) {
     if (! _PHASES.containsKey(phase)) {
@@ -119,7 +119,7 @@ abstract class BuildTool extends BuildTool_inner {
       throw new MultipleTargetsWithSameNameException(name);
     }
 
-    var targetDef = new target.internal(description, dependencies,
+    var targetDef = new TargetDef(description, dependencies,
       weakDependencies, false);
     return targetDef;
   }
@@ -132,12 +132,12 @@ class PhaseTarget extends TargetMethod {
   
   factory PhaseTarget(String name, List<String> phaseRunsBefore,
       List<String> phaseRunsAfter) {
-    var targetDef = new target.internal(name,
+    var targetDef = new TargetDef(name,
       <String>[], phaseRunsAfter, false);
     return new PhaseTarget._(name, targetDef, phaseRunsBefore, phaseRunsAfter);
   }
   
-  PhaseTarget._(String name, target targetDef, List<String> phaseRunsBefore,
+  PhaseTarget._(String name, TargetDef targetDef, List<String> phaseRunsBefore,
       List<String> phaseRunsAfter) :
     this.phaseRunsBefore = phaseRunsBefore,
     this.phaseRunsAfter = phaseRunsAfter,
@@ -173,7 +173,7 @@ class PhaseTarget extends TargetMethod {
 
 class TopPhaseTarget extends TargetMethod {
   factory TopPhaseTarget(String name, PhaseTarget phase, bool isDefault) {
-    var targetDef = new target.internal(name, <String>[],
+    var targetDef = new TargetDef(name, <String>[],
       // we don't need a weak link to the phase, because the phase's targets
       // are added as strong dependencies to this top target.
       <String>[],
@@ -181,7 +181,7 @@ class TopPhaseTarget extends TargetMethod {
     return new TopPhaseTarget._(name, targetDef);
   }
 
-  TopPhaseTarget._(String name, target targetDef) :
+  TopPhaseTarget._(String name, TargetDef targetDef) :
     super(name, targetDef);
 
   @override
@@ -204,7 +204,7 @@ class VirtualTarget extends TargetMethod {
     if (weakDependencies == null) {
       weakDependencies = <String>[];
     }
-    var targetDef = new target.internal(description,
+    var targetDef = new TargetDef(description,
       dependencies, weakDependencies, false);
     var ret = new VirtualTarget._(name, targetDef);
     if (isTop) {
@@ -215,7 +215,7 @@ class VirtualTarget extends TargetMethod {
     return ret;
   }
 
-  VirtualTarget._(String name, target targetDef) :
+  VirtualTarget._(String name, TargetDef targetDef) :
     super(name, targetDef);
 
   @override
@@ -229,11 +229,11 @@ class VirtualTarget extends TargetMethod {
 
 class NoOpTarget extends VirtualTarget {
   factory NoOpTarget(String name, String description) {
-    var targetDef = new target.internal(description, <String>[], <String>[],
+    var targetDef = new TargetDef(description, <String>[], <String>[],
       false);
   }
 
-  NoOpTarget._(String name, target targetDef) :
+  NoOpTarget._(String name, TargetDef targetDef) :
     super._(name, targetDef);
 
   @override

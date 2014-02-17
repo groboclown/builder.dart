@@ -57,7 +57,7 @@ class Delete extends BuildTool {
   }
 
 
-  Delete._(String name, target targetDef, String phase, Pipe pipe,
+  Delete._(String name, TargetDef targetDef, String phase, Pipe pipe,
       ResourceCollection files, FailureMode onFailure) :
       this._files = files, this.onFailure = onFailure,
       super(name, targetDef, phase, pipe);

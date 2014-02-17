@@ -101,7 +101,7 @@ class UnitTests extends BuildTool {
   }
 
 
-  UnitTests._(String name, target targetDef, String phase, Pipe pipe,
+  UnitTests._(String name, TargetDef targetDef, String phase, Pipe pipe,
       ResourceListable summaryDir, List<String> testArgs, FailureMode onFailure,
       TestResultWriter resultWriter) :
     this.summaryDir = summaryDir, this.onFailure = onFailure,

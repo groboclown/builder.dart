@@ -59,9 +59,9 @@ export 'src/logger.dart' show
 export 'src/project.dart' show
   Project;
 
-import 'src/target.dart';
-export 'src/target.dart' show
-  TargetMethod, target;
+import 'src/targetmethod.dart';
+export 'src/targetmethod.dart' show
+  TargetMethod, TargetDef;
 
 //import 'src/failure.dart';
 export 'src/failure.dart' show

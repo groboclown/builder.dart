@@ -27,7 +27,7 @@ library builder.src.argparser;
 import 'dart:io';
 import 'package:args/args.dart';
 
-import 'target.dart';
+import 'targetmethod.dart';
 import 'logger.dart';
 
 /**

@@ -57,7 +57,7 @@ class MkDir extends BuildTool {
   }
 
 
-  MkDir._(String name, target targetDef, String phase, Pipe pipe,
+  MkDir._(String name, TargetDef targetDef, String phase, Pipe pipe,
            FailureMode onFailure) :
     this.onFailure = onFailure,
     super(name, targetDef, phase, pipe);

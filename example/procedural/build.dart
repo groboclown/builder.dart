@@ -37,7 +37,7 @@ class Build {
     print("inside the main() target");
   }
 
-  @target("the full build", depends: [ 'clean', 'main' ])
+  @target("the full build", depends: 'clean, main')
   void full(Project p) {
     print("inside the full() target");
   }

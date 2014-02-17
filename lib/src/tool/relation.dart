@@ -79,7 +79,7 @@ class Relationship extends BuildTool {
 
 
 
-  Relationship._(String name, target targetDef, String phase, Pipe pipe) :
+  Relationship._(String name, TargetDef targetDef, String phase, Pipe pipe) :
     super(name, targetDef, phase, pipe);
 
 

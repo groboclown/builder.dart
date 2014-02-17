@@ -31,7 +31,7 @@ import 'package:unittest/vm_config.dart';
 
 import '../lib/src/resource.dart';
 import '../lib/src/decl.dart';
-import '../lib/src/target.dart';
+import '../lib/src/targetmethod.dart';
 import '../lib/src/project.dart';
 
 
@@ -134,12 +134,12 @@ class MockBuildTool extends BuildTool_inner {
     if (weakDependencies == null) {
       weakDependencies = <String>[];
     }
-    var targetDef = new target.internal(description,
+    var targetDef = new TargetDef(description,
       dependencies, weakDependencies, false);
     return new MockBuildTool._(name, targetDef, pipe);
   }
 
-  MockBuildTool._(String name, target targetDef, Pipe pipe) :
+  MockBuildTool._(String name, TargetDef targetDef, Pipe pipe) :
     super(name, targetDef, pipe);
 
   @override

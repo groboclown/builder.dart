@@ -29,7 +29,7 @@ import 'dart:async';
 
 import 'logger.dart';
 import 'argparser.dart';
-import 'target.dart';
+import 'targetmethod.dart';
 import 'exceptions.dart';
 import 'resource.dart';
 

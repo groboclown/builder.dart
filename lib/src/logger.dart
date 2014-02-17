@@ -29,8 +29,7 @@ import 'dart:io';
 
 import 'package:ansicolor/ansicolor.dart';
 
-
-import 'target.dart';
+import 'targetmethod.dart';
 import 'resource.dart';
 
 

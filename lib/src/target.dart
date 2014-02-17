@@ -36,106 +36,59 @@
 library builder.src.target;
 
 import 'dart:mirrors';
-import 'dart:collection';
-import 'dart:async';
 
-import 'project.dart';
+import 'targetmethod.dart';
+
+
 
 /**
  * A target description.  Can be used as an annotation in the procedural
  * build approach.
+ *
+ * The dependency list must be a comma separated [String], because Dart
+ * annotations do not allow lists.
  */
 class target {
   final bool isDefault;
+
   final String description;
 
   /**
    * Defines the ordering relationship.  Implicitly includes all the strong
    * dependencies.
    */
-  final Set<String> weakDepends;
+  final String weakDepends;
 
   /**
    * Defines which targets will be built if this one is built.
    */
-  final Set<String> strongDepends;
+  final String strongDepends;
 
-  factory target(String description,
-      { Iterable<String> depends: null, Iterable<String> weak: null }) {
-    return new target._(description,
-      _asStringSet(depends), _asStringSet(weak), false);
+  const target(String description,
+      { String depends: null, String weak: null }) :
+    this.description = description,
+    this.strongDepends = depends,
+    this.weakDepends = weak,
+    this.isDefault = false;
+
+  const target.main(String description,
+      { String depends: null, String weak: null }) :
+    this.description = description,
+    this.strongDepends = depends,
+    this.weakDepends = weak,
+    this.isDefault = true;
+
+  TargetDef createTargetDef() {
+    return new TargetDef(description,
+      _split(strongDepends),
+      _split(weakDepends),
+      isDefault);
   }
 
-  factory target.main(String description,
-      { Iterable<String> depends: null, Iterable<String> weak: null }) {
-    return new target._(description,
-      _asStringSet(depends), _asStringSet(weak), true);
+
+  Iterable<String> _split(String val) {
+    return val.split(",").map((s) => s.trim()).where((s) => s.isNotEmpty);
   }
-
-
-  /**
-   * A "friend" constructor, used by tool.dart.
-   */
-  factory target.internal(String description,
-      Iterable<String> depends, Iterable<String> weak, bool isDefault) {
-    return new target._(description,
-    _asStringSet(depends), _asStringSet(weak), isDefault);
-  }
-
-
-  const target._(this.description, this.strongDepends, this.weakDepends,
-      this.isDefault);
-}
-
-
-
-/**
- * The abstract class that defines the actual invocable target.
- */
-abstract class TargetMethod {
-  final String name;
-  final target targetDef;
-
-  TargetMethod(this.name, this.targetDef);
-
-  List<String> get runsAfter {
-    var ret = new Set<String>.from(targetDef.weakDepends);
-    ret.addAll(targetDef.strongDepends);
-    return new UnmodifiableListView<String>(ret);
-  }
-
-  List<String> get requires =>
-      new UnmodifiableListView<String>(targetDef.strongDepends);
-
-
-
-  /**
-   * Performs the operation of the target.  It throws a [BuildException]
-   * on an error (see [exceptions.dart]).
-   */
-  Future<Project> start(Project project);
-}
-
-
-class AnnotatedTarget extends TargetMethod {
-  final InstanceMirror owner;
-  final MethodMirror method;
-
-  AnnotatedTarget(target targetDef, InstanceMirror owner, MethodMirror method) :
-    owner = owner,
-    method = method,
-    super(MirrorSystem.getName(method.simpleName), targetDef);
-
-  @override
-  Future<Project> start(Project project) {
-    return new Future<Project>(() {
-      InstanceMirror im = owner.invoke(method.simpleName, [ project ]);
-      // Does this need explicit error checking?
-
-      return project;
-    });
-  }
-
 }
 
 
@@ -143,27 +96,31 @@ class AnnotatedTarget extends TargetMethod {
 /**
  * Creates the build targets that are defined in a builder Class.
  */
+
 List<TargetMethod> parseTargets(Type builder) {
   ClassMirror cm = reflectClass(builder);
 
-  // Find the constructor & targets
+// Find the constructor & targets
 
   var constructor;
-  var targets = <MethodMirror, target>{};
+  var targets = <MethodMirror, target>{
+  };
 
   cm.declarations.values.where((m) => m is MethodMirror)
     .forEach((m) {
       if (m.isConstructor && m.parameters.length == 0) {
         // TODO Could check here for multiple no-arg constructors...
         constructor = m;
-      } else if (! m.isStatic && m.isRegularMethod && ! m.isOperator &&
+      }
+      else if (!m.isStatic && m.isRegularMethod && !m.isOperator &&
           m.parameters.length == 1
           // TODO may need to fix this to be correect
           && MirrorSystem.getName(m.parameters[0].type.simpleName) == 'Project'
           ) {
         // Add all methods that have a 'target' annotation
-        m.metadata.where((t) => MirrorSystem.getName(t.type.simpleName) == 'target')
-          .forEach((t) => targets[m] = t);
+        m.metadata.where((t) => MirrorSystem.getName(t.type.simpleName) ==
+        'target')
+        .forEach((t) => targets[m] = t);
       }
     });
   if (constructor == null) {
@@ -175,7 +132,8 @@ List<TargetMethod> parseTargets(Type builder) {
 
   // Create our returns
   var ret = <TargetMethod>[];
-  targets.forEach((mm, t) => ret.add(new AnnotatedTarget(t, buildInstance, mm)));
+    targets.forEach((mm, t) => ret.add(
+        new AnnotatedTarget(t.createTargetDef(), buildInstance, mm)));
 
   // This should be done in the caller
   //var defaults = ret.where((t) => t.targetDef.isDefault);
@@ -184,17 +142,4 @@ List<TargetMethod> parseTargets(Type builder) {
   //}
 
   return ret;
-}
-
-
-Set<String> _asStringSet(Iterable<String> x) {
-  Set<String> s;
-  if (x == null) {
-    s = new Set<String>();
-  } else if (x is Set<String>) {
-    s = x;
-  } else {
-    s = new Set<String>.from(x);
-  }
-  return s;
 }

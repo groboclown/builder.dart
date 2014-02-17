@@ -36,5 +36,4 @@ export 'src/exceptions.dart' show
   BuildSetupException, BuildExecutionException;
 export 'src/project.dart' show
   Project;
-//import '../target.dart';
 

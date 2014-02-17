@@ -142,7 +142,7 @@ class Exec extends BuildTool {
   }
 
 
-  Exec._(String name, target targetDef, String phase, Pipe pipe,
+  Exec._(String name, TargetDef targetDef, String phase, Pipe pipe,
       DirectoryResource workingDir, FileResource cmd,
       Iterable<String> args, Map<String, String> env,
       bool includeParentEnvironment,

@@ -33,6 +33,5 @@ export 'task/dart.dart';
 export 'task/dart2js.dart';
 export 'task/dartanalyzer.dart';
 export 'task/dartdoc.dart';
-export 'task/relation.dart';
 export 'task/unittest.dart';
 

@@ -34,7 +34,7 @@ import '../resource.dart';
 import '../os.dart';
 import '../logger.dart';
 import '../exceptions.dart';
-import '../target.dart';
+import '../targetmethod.dart';
 
 /**
  * Spawns the dartAnalyzer immediately.
@@ -45,7 +45,7 @@ import '../target.dart';
 Future dartAnalyzer(
     Resource dartFile, Logger logger, StreamController<LogMessage> messages,
     { DirectoryResource packageRoot: null, String cmd: null,
-    Set<String> uniqueLines: null, TargetMethod activeTarget }) {
+    Set<String> uniqueLines: null, TargetMethod activeTarget: null }) {
   assert(messages != null);
   assert(dartFile != null);
   if (cmd == null) {
