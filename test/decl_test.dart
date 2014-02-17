@@ -25,7 +25,6 @@ library decl_test;
 
 import 'dart:async';
 import 'dart:io';
-import 'package:path/path.dart' as path;
 
 import 'package:builder/unittest.dart';
 import 'package:unittest/vm_config.dart';
