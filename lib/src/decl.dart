@@ -51,7 +51,11 @@ abstract class BuildTool_inner extends TargetMethod {
 
 
 /**
- * Top level build tool.
+ * Top level build tool.  All declaration-based build tools extend this class.
+ *
+ * The usual pattern for a new [BuildTool] class has a factory constructor that
+  * calls out to [BuildTool.mkTargetDef] to create the second argument of the
+  * parent constructor.
  */
 abstract class BuildTool extends BuildTool_inner {
   final TargetMethod phase;
@@ -164,6 +168,8 @@ class PhaseTarget extends TargetMethod {
     return new Future<Project>(() => project);
   }
 }
+
+
 
 class TopPhaseTarget extends TargetMethod {
   factory TopPhaseTarget(String name, PhaseTarget phase, bool isDefault) {
@@ -442,3 +448,4 @@ List<BuildTool_inner> computeChanges_inner(Set<Resource> changedFiles,
 
   return new List<BuildTool_inner>.from(ret);
 }
+

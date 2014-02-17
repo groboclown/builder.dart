@@ -22,7 +22,7 @@
  */
 
 
-library builder.src.tool.dart;
+library builder.src.tool.relation;
 
 import 'dart:async';
 import 'dart:io';
@@ -180,7 +180,7 @@ class TranslateResourceListable<T extends Resource> extends ResourceListable {
   bool contains(Resource other) => destLocation.contains(other);
 
   @override
-  string relativeChildName(Resource child) => destLocation.relativeChildName(child);
+  String relativeChildName(Resource child) => destLocation.relativeChildName(child);
 
   @override
   List<T> list() {

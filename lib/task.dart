@@ -21,29 +21,20 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * The call-in for the build system.
- */
-
-library builder.make;
-
-import 'src/argparser.dart';
-import 'src/project.dart';
-export 'src/project.dart' show Project;
-
-import 'src/target.dart';
-export 'src/target.dart' show target;
-
-export 'src/tasks.dart';
-
+library builder.std;
 
 /**
- * Build using a procedural execution.
+ * The functions and classes used by libraries that define tasks.
  */
-void make(Type builderClass, List<String> args) {
-  var targets = parseTargets(builderClass);
-  var buildArgs = new BuildArgs.fromCmd(args, targets);
-  var project = new Project.parse(buildArgs);
-  project.buildTargets(buildArgs.targetsToRun);
-}
+
+export 'src/resource.dart';
+
+export 'src/os.dart';
+export 'src/logger.dart' show
+  LogMessage, Logger, AbstractLogger;
+export 'src/exceptions.dart' show
+  BuildSetupException, BuildExecutionException;
+export 'src/project.dart' show
+  Project;
+//import '../target.dart';
 

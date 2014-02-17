@@ -41,6 +41,9 @@ export 'src/failure.dart' show
 import 'dart:io';
 import 'dart:async';
 
+export 'src/tools.dart';
+
+
 /**
  * The declarative build tool.
  *

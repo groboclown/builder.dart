@@ -26,9 +26,6 @@ library build;
 // The build library
 import 'package:builder/builder.dart';
 
-// The standard dart language tools
-import 'package:builder/dart.dart';
-
 // The standard package layout definitions
 import 'package:builder/std.dart';
 

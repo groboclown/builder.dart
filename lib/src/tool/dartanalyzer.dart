@@ -25,165 +25,152 @@
 library builder.src.tool.dartanalysis;
 
 import 'dart:async';
-import 'dart:io';
-import 'dart:convert';
 
-import 'dart_path.dart';
-
-import '../resource.dart';
-import '../os.dart';
 import '../logger.dart';
-import '../exceptions.dart';
-import '../target.dart';
+import '../../tool.dart';
+import '../task/dartanalyzer.dart';
 
 /**
- * Spawns the dartAnalyzer immediately.
+ * Build tool for running the `dartanalysis` tool on a set of input files.
+ * It takes the following arguments, in addition to the normal build tool
+ * arguments:
  *
- * The [packageRoot] is the package directory.  The returned [Future]
- * executes when the process completes.
+ * * `cmd` ([String]) - the actual command to run.  By default, this is
+ *  found using the `DART_HOME` or `DART_SDK` environment variable, under
+ *  the `bin/dartanalyzer` name.
+ * * `dartFiles` ([ResourceSet]) - all the files to analyze.  For each file
+ *  in this set, the analyzer will be called once.  This most probably will
+ *  cause the analyzer to check the same file multiple times, so you can
+ *  optimize your build to just include the entry files.  For safety, this
+ *  can just be every dart file, but will run slower.
+ * * `packageRoot` ([DirectoryResource]) - the "packages" directory.  If
+ *  not specified, then this uses the "packages" directory where the build
+ *  file is located (the "current directory").
+ * * `onFailure` ([FailureMode]) - how to handle a failure message from the
+ *  analyzer.  Default is to quit the build with an error.
+ * * `onWarning` ([FailureMode]) - how to handle a warning message from the
+ *  analyzer.  Default is to log the message, but keep the build running.
+ * * `onInfo` ([FailureMode]) - how to handle an info message from the
+ *  analyzer.  Default is to log the message, but keep the build running.
+ *
+ * **Normal Example:**
+ *
+ *     final dartAnalyzer = new DartAnalyzer("lint",
+ *         description: "Check the Dart files for language issues",
+ *         dartFiles: DART_FILES);
+ *
+ * Creates a dart analyzer target named "lint", using the default (not
+ * specified) package root, and run on all files in the `DART_FILES`
+ * [ResourceSet].  It will fail the build if the dart analyzer reports
+ * failures.  It will not fail the build on warning or info messages.
  */
-Future dartAnalyzer(
-    Resource dartFile, Logger logger, StreamController<LogMessage> messages,
-    { DirectoryResource packageRoot: null, String cmd: null,
-    Set<String> uniqueLines: null, TargetMethod activeTarget }) {
-  assert(messages != null);
-  assert(dartFile != null);
-  if (cmd == null) {
-    cmd = DART_ANALYZER_NAME;
-  }
-  Resource exec = resolveExecutable(cmd, DART_PATH);
-  if (exec == null) {
-    throw new BuildExecutionException(activeTarget,
-      "could not find " + cmd);
-  }
+class DartAnalyzer extends BuildTool {
+  final String cmd;
 
-  var args = <String>['--machine', '--show-package-warnings'];
-  if (packageRoot != null) {
-    args.add('--package-root');
-    args.add(packageRoot.relname);
-  }
-  args.add(dartFile.relname);
+  final DirectoryResource packageRoot;
 
-  logger.debug("Running [" + exec.relname + "] with arguments " +
-  args.toString());
+  final FailureMode onFailure;
 
-  return Process.start(exec.relname, args).then((process) {
-    // add stdout and stderr into a single stream
-    process.stderr.transform(_createCsvTransformer(uniqueLines))
-      .listen((List<String> row) {
-        if (row.length >= 8) {
-          var msg = new LogMessage.resource(
-              level: row[0].toLowerCase(),
-              tool: "dartanalyzer",
-              category: row[1],
-              id: row[2],
-              file: new FileEntityResource.fromEntity(new File(row[3])),
-              line: int.parse(row[4]),
-              charStart: int.parse(row[5]),
-              charEnd: int.parse(row[5]) + int.parse(row[6]),
-              message: row[7]
-          );
-          messages.add(msg);
-          logger.message(msg);
-        }
-      });
-    process.stdout.transform(new LineSplitter()).listen((String data) {
-        logger.fileInfo(tool: "dartanalyzer",
-        file: dartFile, message: data);
-      });
-    return process.exitCode;
-  }).then((code) {
-    logger.fileInfo(
-        tool: "dartanalysis",
-        file: dartFile,
-        message: "Completed processing " + dartFile.name);
-    return new Future.value(0);
-  });
-}
+  final FailureMode onWarning;
 
+  final FailureMode onInfo;
 
-
-
-
-
-StreamTransformer<String, List<String>> _createCsvTransformer(
-    [ Set<String> uniqueLines ]) {
-  var leftover = new StringBuffer();
-  var state = 0;
-  var currentRow = <String>[];
-
-  void sinkUniqueRow(sink, row) {
-    if (uniqueLines != null) {
-      var r = new StringBuffer();
-      r.writeAll(row, "|");
-      var s = r.toString();
-      if (uniqueLines.contains(s)) {
-        return;
-      }
-      uniqueLines.add(s);
+  factory DartAnalyzer(String name,
+      { String description: "", String phase: PHASE_BUILD,
+      ResourceCollection dartFiles: null, List<String> depends: null,
+      DirectoryResource packageRoot: null,
+      String cmd: null, FailureMode onFailure: null,
+      FailureMode onWarning: null, FailureMode onInfo: null }) {
+    if (depends == null) {
+      depends = <String>[];
     }
-    sink.add(new List<String>.from(row));
+
+    var pipe = new Pipe.list(dartFiles.entries(), <Resource>[]);
+    var targetDef = BuildTool
+    .mkTargetDef(name, description, phase, pipe, depends, <String>[]);
+    return new DartAnalyzer._(name, targetDef, phase, pipe, cmd, packageRoot,
+    onFailure, onWarning, onInfo);
   }
 
-  return new StreamTransformer<String, List<String>>.fromHandlers(
-      handleData: (value, sink) {
-        //print("**" + value.toString());
-        if (value != null) {
-          for (var p = 0; p < value.length; ++p) {
-            var c = new String.fromCharCode(value[p]);
-            switch (state) {
-              case 0: // normal inside cell
-                if (c == '\\') {
-                  state = 1;
-                } else if (c == '|') {
-                  // end of cell
-                  currentRow.add(leftover.toString());
-                  leftover.clear();
-                } else if (c == '\r' || c == '\n') {
-                  // end of row and cell
-                  if (currentRow.isNotEmpty || leftover.isNotEmpty) {
-                    currentRow.add(leftover.toString());
-                  }
-                  leftover.clear();
-                  if (currentRow.isNotEmpty) {
-                    sinkUniqueRow(sink, currentRow);
-                  }
-                  currentRow.clear();
-                  state = 2;
-                } else {
-                  leftover.write(c);
-                }
-                break;
-              case 1: // escape
-                if (c == 'n') {
-                  leftover.write("\n");
-                } else if (c == 'r') {
-                  leftover.write("\r");
-                } else if (c == 't') {
-                  leftover.write("\t");
-                } else {
-                  leftover.write(c);
-                }
-                state = 0;
-                break;
-              case 2: // end of row
-                if (c != '\n' && c != '\r') {
-                  leftover.write(c);
-                  state = 0;
-                }
-                break;
-              default:
-                throw new Exception("invalid state: " + state.toString());
-            }
-          }
+
+  DartAnalyzer._(String name, target targetDef, String phase, Pipe pipe,
+      String cmd, DirectoryResource packageRoot, FailureMode onFailure,
+      FailureMode onWarning, FailureMode onInfo) :
+  this.cmd = cmd, this.packageRoot = packageRoot,
+  this.onFailure = onFailure, this.onWarning = onWarning,
+  this.onInfo = onInfo,
+  super(name, targetDef, phase, pipe);
+
+
+  @override
+  Future<Project> start(Project project) {
+    var inp = new List<Resource>.from(pipe.requiredInput);
+    inp.addAll(pipe.optionalInput);
+
+    if (inp.isEmpty) {
+      project.logger.info("nothing to do");
+      return new Future<Project>.sync(() => project);
+    }
+
+    var uniqueLines = new Set<String>();
+
+    var hadWarnings = false;
+    var hadErrors = false;
+    var hadInfo = false;
+    StreamController<LogMessage> messages = new StreamController<LogMessage>();
+    messages.stream.listen((LogMessage msg) {
+      if (msg.level.startsWith("warn")) {
+        hadWarnings = true;
+      }
+      if (msg.level.startsWith("err")) {
+        hadErrors = true;
+      }
+      if (msg.level.startsWith("info")) {
+        hadInfo = true;
+      }
+    });
+
+
+    // Chain the calls, rather than running in parallel.
+    // For running in parallel, we create all the Futures in the
+    // calls to dartAnalyzer, then return a Future.wait() on all of them.
+    Future ret = null;
+    for (Resource r in inp) {
+      if (r.exists && !(r is ResourceListable)) {
+        Future next(_) {
+          return dartAnalyzer(r, project.logger, messages,
+          packageRoot: packageRoot, cmd: cmd,
+          uniqueLines: uniqueLines,
+          activeTarget: project.activeTarget);
         }
-      },
-      handleDone: (sink) {
-        if (leftover.isNotEmpty) {
-          currentRow.add(leftover.toString());
+        if (ret == null) {
+          ret = next(project);
         }
-        if (currentRow.isNotEmpty) {
-          sinkUniqueRow(sink, currentRow);
+        else {
+          ret = ret.then(next);
         }
-      });
+      }
+    }
+    ret = ret.then((_) {
+      messages.close();
+      if (hadErrors) {
+        handleFailure(project,
+        mode: onFailure,
+        failureMessage: "one or more files had errors");
+      }
+      if (hadWarnings && onWarning != null) {
+        handleFailure(project,
+        mode: onWarning,
+        failureMessage: "one or more files had warnings");
+      }
+      if (hadInfo && onInfo != null) {
+        handleFailure(project,
+        mode: onInfo,
+        failureMessage: "one or more files had info messages");
+      }
+      return new Future<Project>.sync(() => project);
+    });
+    return ret;
+  }
 }
+

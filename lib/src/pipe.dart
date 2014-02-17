@@ -28,7 +28,6 @@
 library builder.src.decl;
 
 import 'resource.dart';
-import 'exceptions.dart';
 
 
 
