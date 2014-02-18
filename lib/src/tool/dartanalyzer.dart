@@ -85,8 +85,8 @@ class DartAnalyzer extends BuildTool {
     }
 
     var pipe = new Pipe.list(dartFiles.entries(), <Resource>[]);
-    var targetDef = BuildTool
-    .mkTargetDef(name, description, phase, pipe, depends, <String>[]);
+    var targetDef = BuildTool.mkTargetDef(name, description, phase, pipe,
+        depends, <String>[]);
     return new DartAnalyzer._(name, targetDef, phase, pipe, cmd, packageRoot,
     onFailure, onWarning, onInfo);
   }
