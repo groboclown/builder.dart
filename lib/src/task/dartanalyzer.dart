@@ -30,11 +30,8 @@ import 'dart:convert';
 
 import '../dart_path.dart';
 
-import '../resource.dart';
+import '../../task.dart';
 import '../os.dart';
-import '../logger.dart';
-import '../exceptions.dart';
-import '../targetmethod.dart';
 
 /**
  * Spawns the dartAnalyzer immediately.

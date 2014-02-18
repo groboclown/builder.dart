@@ -28,3 +28,11 @@
 library builder.src.task.dart2js;
 
 import '../../task.dart';
+
+
+import '../dart_path.dart';
+
+import '../os.dart';
+import '../logger.dart';
+import '../exceptions.dart';
+

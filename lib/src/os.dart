@@ -26,7 +26,7 @@
  * [Platform]).
  */
 
-library builder.exec;
+library builder.os;
 
 import 'dart:io';
 import 'package:path/path.dart' as path;

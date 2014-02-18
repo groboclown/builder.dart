@@ -36,4 +36,6 @@ export 'src/exceptions.dart' show
   BuildSetupException, BuildExecutionException;
 export 'src/project.dart' show
   Project;
+export 'src/targetmethod.dart' show
+  TargetMethod, TargetDef;
 
