@@ -38,4 +38,4 @@ final List<String> DART_PATH = <String>[
     ? null
     : path.join(Platform.environment['DART_HOME'], "bin" ))];
 final String DART_ANALYZER_NAME = "dartanalyzer";
-
+final String DART2JS_NAME = "dart2js";

@@ -27,12 +27,63 @@
  */
 library builder.src.task.dart2js;
 
+import 'dart:async';
+import 'dart:io';
+import 'dart:convert';
+
 import '../../task.dart';
-
-
 import '../dart_path.dart';
-
 import '../os.dart';
-import '../logger.dart';
-import '../exceptions.dart';
+
+
+Future dart2js(Resource dartFile, Logger logger,
+    StreamController<LogMessage> messages,
+    { TargetMethod activeTarget, Resource outputFile, String cmd: null,
+    bool checked: true, bool minified: false }) {
+  assert(messages != null);
+  assert(dartFile != null);
+  if (cmd == null) {
+    cmd = DART2JS_NAME;
+  }
+  Resource exec = resolveExecutable(cmd, DART_PATH);
+  if (exec == null) {
+    throw new BuildExecutionException(activeTarget,
+      "could not find " + cmd);
+  }
+
+  var args = <String>[];
+  if (checked) {
+    args.add("-c");
+  }
+  if (minified) {
+    args.add("-m");
+  }
+  if (outputFile != null) {
+    args
+      ..add("-o")
+      ..add(outputFile.absolute);
+  }
+  args.add(dartFile.relname);
+
+  logger.debug("Running [" + exec.relname + "] with arguments " +
+  args.toString());
+
+  return Process.start(exec.relname, args).then((process) {
+    process.stderr.transform(new LineSplitter()).listen((String line) {
+      // TODO process the output data.
+      logger.warn(line);
+    });
+    process.stdout.transform(new LineSplitter()).listen((String data) {
+      // TODO process the output data.
+      logger.info(data);
+    });
+    return process.exitCode;
+  }).then((code) {
+    logger.fileInfo(
+        tool: "dart2js",
+        file: dartFile,
+        message: "Completed processing " + dartFile.name);
+    return new Future.value(code);
+  });
+}
 

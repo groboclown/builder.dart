@@ -26,7 +26,6 @@ library builder.src.tool.dartanalysis;
 
 import 'dart:async';
 
-import '../logger.dart';
 import '../../tool.dart';
 import '../task/dartanalyzer.dart';
 
