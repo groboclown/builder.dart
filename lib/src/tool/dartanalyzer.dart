@@ -96,16 +96,15 @@ class DartAnalyzer extends BuildTool {
   DartAnalyzer._(String name, TargetDef targetDef, String phase, Pipe pipe,
       String cmd, DirectoryResource packageRoot, FailureMode onFailure,
       FailureMode onWarning, FailureMode onInfo) :
-  this.cmd = cmd, this.packageRoot = packageRoot,
-  this.onFailure = onFailure, this.onWarning = onWarning,
-  this.onInfo = onInfo,
-  super(name, targetDef, phase, pipe);
+    this.cmd = cmd, this.packageRoot = packageRoot,
+    this.onFailure = onFailure, this.onWarning = onWarning,
+    this.onInfo = onInfo,
+    super(name, targetDef, phase, pipe);
 
 
   @override
   Future<Project> start(Project project) {
-    var inp = new List<Resource>.from(pipe.requiredInput);
-    inp.addAll(pipe.optionalInput);
+    var inp = getChangedInputs();
 
     if (inp.isEmpty) {
       project.logger.info("nothing to do");

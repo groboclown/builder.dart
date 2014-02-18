@@ -84,10 +84,20 @@ abstract class BuildTool extends BuildTool_inner {
    */
   Iterable<Resource> getChangedInputs() {
     var ret = new Set<Resource>();
-    ret.addAll(pipe.requiredInput.where((r) =>
-      _CHANGED_RESOURCES.any((cr) => cr.matches(r))));
-    ret.addAll(pipe.optionalInput.where((r) =>
-      _CHANGED_RESOURCES.any((cr) => cr.matches(r))));
+    if (_CHANGED_RESOURCES.isEmpty) {
+      // Just add everything, under the assumption that no explicit changes
+      // given means forced build everything.  This needs to be done in a
+      // better way.
+      ret
+        ..addAll(pipe.requiredInput)
+        ..addAll(pipe.optionalInput);
+      return ret;
+    }
+    ret
+      ..addAll(pipe.requiredInput.where((r) =>
+        _CHANGED_RESOURCES.any((cr) => cr.matches(r))))
+      ..addAll(pipe.optionalInput.where((r) =>
+        _CHANGED_RESOURCES.any((cr) => cr.matches(r))));
     return ret;
   }
 
@@ -381,7 +391,7 @@ void connectPipe_internal(BuildTool_inner tm,
   }
 
   //print("${tm} pipe output: ${tm.pipe.output}");
-  for (var r in tm.pipe.output) {
+  for (var r in tm.pipe.requiredOutput) {
     var links = pipedOutput[r];
     if (links == null) {
       links = <BuildTool_inner>[];

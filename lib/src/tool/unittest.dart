@@ -112,8 +112,7 @@ class UnitTests extends BuildTool {
 
   @override
   Future<Project> start(Project project) {
-    var inp = new List<Resource>.from(pipe.requiredInput);
-    inp.addAll(pipe.optionalInput);
+    var inp = getChangedInputs();
     if (inp.isEmpty) {
       project.logger.info("nothing to do");
       return new Future<Project>.sync(() => project);

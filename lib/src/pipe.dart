@@ -69,8 +69,13 @@ abstract class Pipe {
 
   Map<Resource, List<Resource>> get directPipe;
 
-
   /**
+   * All the output that is not explicitly optional, as based upon the
+   * [directPipe] output coming from the optional input.
+   */
+  Iterable<Resource> get requiredOutput;
+
+/**
    * Match the given input to the corresponding output [Resource]s.  It first
    * uses the [#directPipe] before defaulting to the [#output].  If there
    * were no matches, it returns an empty list.
@@ -146,6 +151,8 @@ class SimplePipe extends Pipe {
 
   final Set<Resource> _output = new Set<Resource>();
 
+  final Set<Resource> _requiredOutput = new Set<Resource>();
+
   final Map<Resource, Iterable<Resource>> _directPipe =
   <Resource, Iterable<Resource>>{
   };
@@ -161,6 +168,7 @@ class SimplePipe extends Pipe {
       _directPipe[r] = out;
       _output.addAll(out);
     }
+    _requiredOutput.addAll(_output);
   }
 
 
@@ -174,6 +182,7 @@ class SimplePipe extends Pipe {
     if (input != null && output != null) {
       _directPipe[input] = [ output ];
     }
+    _requiredOutput.addAll(_output);
   }
 
 
@@ -184,6 +193,7 @@ class SimplePipe extends Pipe {
     if (outputs != null) {
       _output.addAll(outputs);
     }
+    _requiredOutput.addAll(_output);
   }
 
 
@@ -201,18 +211,28 @@ class SimplePipe extends Pipe {
     var out = new Set<Resource>();
     if (output != null) {
       out.addAll(output);
+      _requiredOutput.addAll(output);
     }
 
+    // populate the required output with all output that is not explicitly
+    // optional; do this by adding all output, then removing all optional
+    // inputs' outputs, then add in all required inputs' outputs.
     if (directPipe != null) {
       for (Resource r in directPipe.keys) {
         if (!_requiredInput.contains(r) && !_optionalInput.contains(r)) {
           _optionalInput.add(r);
+          _requiredOutput.removeAll(directPipe[r]);
         }
         _directPipe[r] = new Set<Resource>.from(directPipe[r]);
         out.addAll(_directPipe[r]);
       }
     }
     _output.addAll(out);
+    _requiredInput.forEach((r) {
+      if (_directPipe.containsKey(r)) {
+        _requiredOutput.addAll(_directPipe[r]);
+      }
+    });
   }
 
 
@@ -224,6 +244,12 @@ class SimplePipe extends Pipe {
 
   @override
   Iterable<Resource> get output => _output;
+
+  /**
+   * All the output that is not explicitly marked as optional.
+   */
+  @override
+  Iterable<Resource> get requiredOutput => _requiredOutput;
 
   @override
   Map<Resource, Iterable<Resource>> get directPipe => _directPipe;
