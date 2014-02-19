@@ -58,6 +58,8 @@ class Exec extends BuildTool {
   final bool stdoutAppend;
   final bool stderrAppend;
 
+  final Set<String> platforms;
+
 
 
 
@@ -73,7 +75,8 @@ class Exec extends BuildTool {
       FileResource stderr, bool pipeStderrToStdout,
       bool stdoutAppend: false, bool stderrAppend: false,
       FailureMode onErrorLaunching: null,
-      FailureMode onFailure: null }) {
+      FailureMode onFailure: null,
+      String platform: null, List<String> platforms: null }) {
     if (depends == null) {
       depends = <String>[];
     }
@@ -127,6 +130,14 @@ class Exec extends BuildTool {
       }
     }
 
+    var plats = new Set<String>();
+    if (platforms != null) {
+      plats.addAll(platforms.map((p) => p.toLowerCase()));
+    }
+    if (platform != null) {
+      plats.add(platform.toLowerCase());
+    }
+
 
     var pipe = new Pipe.all(
       requiredInput: requiredInput,
@@ -138,7 +149,7 @@ class Exec extends BuildTool {
     return new Exec._(name, targetDef, phase, pipe,
       workingDir, cmd, args, env, includeParentEnvironment, runInShell,
       stdin, stdout, stderr, pipeStderrToStdout, stdoutAppend, stderrAppend,
-      onErrorLaunching, onFailure);
+      onErrorLaunching, onFailure, plats);
   }
 
 
@@ -149,7 +160,8 @@ class Exec extends BuildTool {
       bool runInShell, FileResource stdin, FileResource stdout,
       FileResource stderr, bool pipeStderrToStdout,
       bool stdoutAppend, bool stderrAppend,
-      FailureMode onErrorLaunching, FailureMode onFailure) :
+      FailureMode onErrorLaunching, FailureMode onFailure,
+      Set<String> platforms) :
     this.workingDir = workingDir,
     this.cmd = cmd,
     this.args = args,
@@ -164,12 +176,19 @@ class Exec extends BuildTool {
     this.pipeStderrToStdout = pipeStderrToStdout,
     this.onErrorLaunching = onErrorLaunching,
     this.onFailure = onFailure,
+    this.platforms = platforms,
     super(name, targetDef, phase, pipe);
 
 
 
   @override
   Future<Project> start(Project project) {
+    if (platforms.isNotEmpty &&
+        ! platforms.contains(Platform.operatingSystem.toLowerCase())) {
+      project.logger.info("Cannot run " + cmd.relname + " on this operating system");
+      return new Future<Project>.sync(() => project);
+    }
+
     project.logger.debug("Running [" + cmd.relname + "] with arguments " +
       args.toString());
 

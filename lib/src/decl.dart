@@ -119,7 +119,7 @@ abstract class BuildTool extends BuildTool_inner {
    * to the [BuildTool] instance.
    */
   static TargetDef mkTargetDef(String name, String description,
-      String phase, Pipe pipe, Iterable<String> dependencies,
+      String phase, Pipe pipe, Iterable<String> depends,
       Iterable<String> weakDependencies) {
     if (! _PHASES.containsKey(phase)) {
       throw new NoSuchPhaseException(phase);
@@ -129,7 +129,7 @@ abstract class BuildTool extends BuildTool_inner {
       throw new MultipleTargetsWithSameNameException(name);
     }
 
-    var targetDef = new TargetDef(description, dependencies,
+    var targetDef = new TargetDef(description, depends,
       weakDependencies, false);
     return targetDef;
   }
@@ -205,17 +205,17 @@ class TopPhaseTarget extends TargetMethod {
 
 
 class VirtualTarget extends TargetMethod {
-  factory VirtualTarget(String name, String description,
-      Iterable<String> dependencies, Iterable<String> weakDependencies,
-      [ bool isTop = false ]) {
-    if (dependencies == null) {
-      dependencies = <String>[];
+  factory VirtualTarget(String name, { String description,
+      Iterable<String> depends, Iterable<String> weakDependencies,
+      bool isTop: false }) {
+    if (depends == null) {
+      depends = <String>[];
     }
     if (weakDependencies == null) {
       weakDependencies = <String>[];
     }
     var targetDef = new TargetDef(description,
-      dependencies, weakDependencies, false);
+      depends, weakDependencies, false);
     var ret = new VirtualTarget._(name, targetDef);
     if (isTop) {
       _TOP_PHASES[name] = ret;
@@ -241,6 +241,7 @@ class NoOpTarget extends VirtualTarget {
   factory NoOpTarget(String name, String description) {
     var targetDef = new TargetDef(description, <String>[], <String>[],
       false);
+    return new NoOpTarget._(name, targetDef);
   }
 
   NoOpTarget._(String name, TargetDef targetDef) :

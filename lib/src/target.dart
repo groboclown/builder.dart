@@ -119,8 +119,9 @@ List<TargetMethod> parseTargets(Type builder) {
           ) {
         // Add all methods that have a 'target' annotation
         m.metadata.where((t) => MirrorSystem.getName(t.type.simpleName) ==
-        'target')
-        .forEach((t) => targets[m] = t);
+            'target')
+            // FIXME "t" is not a "target", but an InstanceMirror.
+            .forEach((t) => targets[m] = t);
       }
     });
   if (constructor == null) {

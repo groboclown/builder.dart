@@ -28,16 +28,30 @@ library build;
  */
 
 // The build library
-import 'package:builder/builder.dart';
+import '../../lib/builder.dart';
 
-// The standard package layout definitions and where Exec tool lives
-import 'package:builder/std.dart';
+// The standard package layout definitions
+import '../../lib/std.dart';
+
+// The tools to run
+final echoWindows = new Exec("echo-windows",
+  description: "run a shell command with windows",
+  cmd: new FileEntityResource.asFile("cmd"),
+  platform: "windows",
+  args: [ "/c", "echo", "hello, windows" ]);
+
+final echoNix = new Exec("echo-nix",
+  description: "run a shell command with a *nix type system",
+  cmd: new FileEntityResource.asFile("bash"),
+  args: [ "-c", "echo", "hello, bash" ]);
+
+final echo = new VirtualTarget("echo",
+  description: "Run the echo command on the correct platform",
+  depends: [ 'echo-windows', 'echo-nix' ]);
 
 
-
-
-
+// The primary build
 void main(List<String> args) {
-// Run the build
+  // Run the build
   build(args);
 }

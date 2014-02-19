@@ -153,18 +153,18 @@ class DartAnalyzer extends BuildTool {
       messages.close();
       if (hadErrors) {
         handleFailure(project,
-        mode: onFailure,
-        failureMessage: "one or more files had errors");
+          mode: onFailure,
+          failureMessage: "one or more files had errors");
       }
       if (hadWarnings && onWarning != null) {
         handleFailure(project,
-        mode: onWarning,
-        failureMessage: "one or more files had warnings");
+          mode: onWarning,
+          failureMessage: "one or more files had warnings");
       }
       if (hadInfo && onInfo != null) {
         handleFailure(project,
-        mode: onInfo,
-        failureMessage: "one or more files had info messages");
+          mode: onInfo,
+          failureMessage: "one or more files had info messages");
       }
       return new Future<Project>.sync(() => project);
     });

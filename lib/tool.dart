@@ -103,9 +103,9 @@ final TargetMethod TARGET_PHASE_DEPLOY = decl.addPhase(
     <String>[],
     <String>[ PHASE_CLEAN, PHASE_BUILD, PHASE_ASSEMBLE ]);
 final TargetMethod TARGET_FULL = new decl.VirtualTarget(
-    "full", "the complete build",
-    <String>[ TARGET_CLEAN, TARGET_BUILD, TARGET_ASSEMBLE, TARGET_DEPLOY ],
-    <String>[], true);
+    "full", description: "the complete build",
+    depends: <String>[ TARGET_CLEAN, TARGET_BUILD, TARGET_ASSEMBLE, TARGET_DEPLOY ],
+    isTop: true);
 final TargetMethod TARGET_NOOP = new decl.NoOpTarget(
     "-no-op", "do nothing");
 
