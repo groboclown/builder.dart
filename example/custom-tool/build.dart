@@ -85,19 +85,21 @@ class NoFixmesTool extends BuildTool {
     var errors = 0;
     for (Resource r in getChangedInputs()) {
       if (r.exists && r.readable) {
+        print("reading " + r.relname);
         var c = new Completer();
         try {
           var s = r.openRead();
           var line = 0;
-          s.transform(new LineSplitter()).listen((String data) {
+          s.transform(new Utf8Decoder(allowMalformed: true))
+              .transform(new LineSplitter()).listen((String data) {
             line++;
-            var col = (data == null) ? -1 : data.indexOf("FIXME") >= 0;
+            var col = (data == null) ? -1 : data.indexOf("FIXME");
             if (col >= 0) {
               errors++;
               project.logger.message(new LogMessage.resource(level: ERROR,
-                tool: "fixme-finder",
-                file: r, line: line, charStart: col, charEnd: col + 5,
-                message: "found 'FIXME'"));
+              tool: "fixme-finder",
+              file: r, line: line, charStart: col, charEnd: col + 5,
+              message: "found 'FIXME'"));
             }
           }, onDone: () {
             c.complete();
@@ -114,7 +116,7 @@ class NoFixmesTool extends BuildTool {
       if (errors > 0) {
         handleFailure(project,
           mode: onFailure,
-          failureMessage: "one or more files had errors");
+          failureMessage: "one or more files contained the 'FIXME' string");
       }
       return ret;
     });

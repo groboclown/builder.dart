@@ -53,7 +53,8 @@ export 'src/decl.dart' show
 
 //import 'src/logger.dart';
 export 'src/logger.dart' show
-  Logger, LogMessage;
+  Logger, LogMessage,
+  WARNING, ERROR, INFO, MAPPING, DEBUG;
 
 //import 'src/project.dart';
 export 'src/project.dart' show
