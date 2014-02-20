@@ -60,6 +60,14 @@ final unitTests = new UnitTests("test",
     summaryDir: TEST_SUMMARY_DIR);
 
 
+// FOR TESTING
+final dart2js = new Dart2JS("dart2js",
+    description: "Convert the dart argparser to js",
+    phase: PHASE_DEPLOY,
+    dartFiles: new FileResource.named("lib/src/argparser.dart").asCollection(),
+    outdir: OUTPUT_DIR);
+
+
 
 
 void main(List<String> args) {

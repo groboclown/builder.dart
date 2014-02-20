@@ -134,7 +134,7 @@ class DartAnalyzer extends BuildTool {
     // calls to dartAnalyzer, then return a Future.wait() on all of them.
     Future ret = null;
     for (Resource r in inp) {
-      if (r.exists && !(r is ResourceListable)) {
+      if (r.exists && r is ResourceStreamable) {
         Future next(_) {
           return dartAnalyzer(r, project.logger, messages,
           packageRoot: packageRoot, cmd: cmd,

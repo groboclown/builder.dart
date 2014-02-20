@@ -69,21 +69,23 @@ Future dart2js(Resource dartFile, Logger logger,
   args.toString());
 
   return Process.start(exec.relname, args).then((process) {
-    process.stderr.transform(new LineSplitter()).listen((String line) {
-      // TODO process the output data.
-      logger.warn(line);
-    });
-    process.stdout.transform(new LineSplitter()).listen((String data) {
-      // TODO process the output data.
-      logger.info(data);
-    });
+    process.stderr.transform(new Utf8Decoder(allowMalformed: true))
+      .transform(new LineSplitter()).listen((String line) {
+        // TODO process the output data.
+        logger.warn(line);
+      });
+    process.stdout.transform(new Utf8Decoder(allowMalformed: true))
+      .transform(new LineSplitter()).listen((String data) {
+        // TODO process the output data.
+        logger.info(data);
+      });
     return process.exitCode;
   }).then((code) {
     logger.fileInfo(
         tool: "dart2js",
         file: dartFile,
         message: "Completed processing " + dartFile.name);
-    return new Future.value(code);
+    return messages.close().then((_) => code);
   });
 }
 

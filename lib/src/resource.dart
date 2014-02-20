@@ -833,6 +833,14 @@ class FileResource extends FileEntityResource<FileSystemEntity>
     return referencedFile.openRead(startPos, endPos);
   }
 
+
+
+  /**
+   * Return this file as a resource collection with a single entry.
+   */
+  ResourceCollection asCollection() {
+    return new SimpleResourceCollection(<Resource>[ this ]);
+  }
 }
 
 
