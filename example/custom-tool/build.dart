@@ -83,34 +83,33 @@ class NoFixmesTool extends BuildTool {
     var waiters = <Future>[];
     //var lineno = <Resource, int>{};
     var errors = 0;
-    for (Resource r in getChangedInputs()) {
-      if (r.exists && r.readable) {
-        print("reading " + r.relname);
-        var c = new Completer();
-        try {
-          var s = r.openRead();
-          var line = 0;
-          s.transform(new Utf8Decoder(allowMalformed: true))
-              .transform(new LineSplitter()).listen((String data) {
-            line++;
-            var col = (data == null) ? -1 : data.indexOf("FIXME");
-            if (col >= 0) {
-              errors++;
-              project.logger.message(new LogMessage.resource(level: ERROR,
-              tool: "fixme-finder",
-              file: r, line: line, charStart: col, charEnd: col + 5,
-              message: "found 'FIXME'"));
-            }
-          }, onDone: () {
-            c.complete();
-          }, onError: (e, s) {
-            c.completeError(e, s);
-          });
-        } catch (e, s) {
-          completer.completeError(e, s);
-        }
-        waiters.add(c.future);
+    for (Resource r in getChangedInputs().where(
+            (s) => s is ResourceStreamable && s.exists && s.readable)) {
+      project.logger.info("reading " + r.relname);
+      var c = new Completer();
+      try {
+        var s = r.openRead();
+        var line = 0;
+        s.transform(new Utf8Decoder(allowMalformed: true))
+            .transform(new LineSplitter()).listen((String data) {
+          line++;
+          var col = (data == null) ? -1 : data.indexOf("FIXME");
+          if (col >= 0) {
+            errors++;
+            project.logger.message(new LogMessage.resource(level: ERROR,
+            tool: "fixme-finder",
+            file: r, line: line, charStart: col, charEnd: col + 5,
+            message: "found 'FIXME'"));
+          }
+        }, onDone: () {
+          c.complete();
+        }, onError: (e, s) {
+          c.completeError(e, s);
+        });
+      } catch (e, s) {
+        completer.completeError(e, s);
       }
+      waiters.add(c.future);
     }
     return Future.wait(waiters).then((_) {
       if (errors > 0) {

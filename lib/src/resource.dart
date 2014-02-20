@@ -70,18 +70,6 @@ abstract class Resource<T extends ResourceListable> {
   String get absolute;
 
   /**
-   * Returns `true` if the [#readAsBytes()] and [#readAsString()] calls are
-   * supported by this [Resource].
-   */
-  bool get readable;
-
-  /**
-   * Returns `true` if the [#writeAsBytes()] and [#writeAsString()] calls are
-   * supported by this [Resource].
-   */
-  bool get writable;
-
-  /**
    * Returns `true` if this [Resource] actually exists.
    */
   bool get exists;
@@ -111,6 +99,71 @@ abstract class Resource<T extends ResourceListable> {
     return false;
   }
 
+
+  /**
+   * Returns `true` if this resource contain the other resource, or if it is
+   * the same object.  If the instance represents a [ResourceListable]
+   * object, then it should check against all the actual [Resource] instances
+   * it lists.  If the instance represents a container [Resource], but one
+   * that *only* represents the container, and not sub-elements, then it
+   * should only match on equality.
+   *
+   * Default implementation returns the [operator ==] value.
+   */
+  bool contains(Resource other) {
+    return this == other;
+  }
+
+
+  /**
+   * Returns `true` if either this [Resource] [#contains(Resource)] the
+   * other [Resource], or if the other [Resource] [#contains(Resource)] this
+   * one.
+   */
+  bool matches(Resource other) {
+    return (this.contains(other) || other.contains(this));
+  }
+
+
+  /**
+   * Checks if this [Resource] represents the exact same [Resource] as `t`.
+   */
+  @override
+  bool operator ==(Resource t) {
+    if (t == null) {
+      return false;
+    }
+    return relname == t.relname;
+  }
+  
+  @override
+  String toString() {
+    return relname;
+  }
+}
+
+
+
+/**
+ * A [Resource] which can be read or written.
+ */
+abstract class ResourceStreamable<T extends ResourceListable> extends Resource<T> {
+
+  /**
+   * Returns `true` if the [#readAsBytes()], [#readAsString()], and
+   * [#openWrite()] calls are supported by this [Resource].
+   */
+  bool get readable;
+
+
+  /**
+   * Returns `true` if the [#writeAsBytes()], [#writeAsString()], and
+   * [#openWrite()] calls are
+   * supported by this [Resource].
+   */
+  bool get writable;
+
+
   /**
    * Read the contents of this [Resource] as binary bytes.  If
    * [#readable] is `false`, then this will throw an [Exception].
@@ -119,6 +172,7 @@ abstract class Resource<T extends ResourceListable> {
   List<int> readAsBytes() {
     throw new Exception("readAsBytes not supported on " + name);
   }
+
 
   /**
    * Read the contents of this [Resource] as character data, using `encoding`
@@ -139,6 +193,7 @@ abstract class Resource<T extends ResourceListable> {
   void writeAsBytes(List<int> data) {
     throw new Exception("writeAsBytes not supported on " + name);
   }
+
 
   /**
    * Write the character `data` to this [Resource], using `encoding`
@@ -185,49 +240,8 @@ abstract class Resource<T extends ResourceListable> {
   Stream<List<int>> openRead([ int startPos, int endPos ]) {
     throw new Exception("open not supported on " + name);
   }
-
-
-  /**
-   * Returns `true` if this resource contain the other resource, or if it is
-   * the same object.  If the instance represents a [ResourceListable]
-   * object, then it should check against all the actual [Resource] instances
-   * it lists.  If the instance represents a container [Resource], but one
-   * that *only* represents the container, and not sub-elements, then it
-   * should only match on equality.
-   *
-   * Default implementation returns the [operator ==] value.
-   */
-  bool contains(Resource other) {
-    return this == other;
-  }
-
-
-  /**
-   * Returns `true` if either this [Resource] [#contains(Resource)] the
-   * other [Resource], or if the other [Resource] [#contains(Resource)] this
-   * one.
-   */
-  bool matches(Resource other) {
-    return (this.contains(other) || other.contains(this));
-  }
-
-
-  /**
-   * Checks if this [Resource] represents the exact same [Resource] as `t`.
-   */
-  @override
-  bool operator ==(Resource t) {
-    if (t == null) {
-      return false;
-    }
-    return relname == t.relname;
-  }
-  
-  @override
-  String toString() {
-    return relname;
-  }
 }
+
 
 
 /**
@@ -482,8 +496,15 @@ abstract class FileEntityResource<T extends FileSystemEntity>
 
   FileEntityResource.inner(this.entity, this._context, this._relname);
 
+  // Implementation note: this uses static methods instead of factory methods
+  // so that the end user can receive the correct class.  However, this makes
+  // the API tricky to use, because the user needs to remember that they
+  // directly call the method, rather than using "new".
 
-  factory FileEntityResource.fromEntity(FileSystemEntity res,
+  // Alternatively, the user could call the correct factory method on the
+  // real type.
+
+  static FileEntityResource fromEntity(FileSystemEntity res,
       { path.Context context: null }) {
     if (context == null) {
       context = GLOBAL_CONTEXT;
@@ -496,17 +517,17 @@ abstract class FileEntityResource<T extends FileSystemEntity>
   }
 
 
-  factory FileEntityResource.asDir(String relname,
+  static DirectoryResource asDir(String relname,
       { path.Context context: null }) {
     return new FileEntityResource(relname, context: context,
-        notFoundHint: 'dir');
+        notFoundHint: 'dir') as DirectoryResource;
   }
 
 
-  factory FileEntityResource.asFile(String relname,
+  static FileResource asFile(String relname,
       { path.Context context: null }) {
     return new FileEntityResource(relname, context: context,
-    notFoundHint: 'file');
+        notFoundHint: 'file') as FileResource;
   }
 
 
@@ -534,15 +555,14 @@ abstract class FileEntityResource<T extends FileSystemEntity>
     }
     var link = null;
     var fullname = context.absolute(relname);
-    // FIXME DEBUG
     //print("relname: [" + relname.toString() + "]; fullname: [" + fullname + "]");
     var stat;
     try {
       stat = FileStat.statSync(fullname);
     } catch (e, s) {
       // This is a work-around for http://code.google.com/p/dart/issues/detail?id=16558
-      // FIXME DEBUG
-      //print(e.toString());
+      // FIXME that bug is fixed, so when Dart v1.1.4 is released, this try/catch
+      // block can be removed.
       //print(s.toString());
     }
     if (stat != null && stat.type == FileSystemEntityType.LINK) {
@@ -621,28 +641,6 @@ abstract class FileEntityResource<T extends FileSystemEntity>
 
   @override
   path.Context get context => _context;
-
-  @override
-  bool get readable {
-    FileStat fileStat = entity.statSync();
-    if (fileStat.type == FileSystemEntityType.NOT_FOUND) {
-      return parent.readable;
-    }
-    int mode = fileStat.mode;
-    // assume that, if any read bit is set, we can read it
-    return ((mode & 292) != 0); // 444 oct
-  }
-
-  @override
-  bool get writable {
-    FileStat fileStat = entity.statSync();
-    if (fileStat.type == FileSystemEntityType.NOT_FOUND) {
-      return parent.readable;
-    }
-    int mode = fileStat.mode;
-    // assume that, if any write bit is set, we can write it
-    return ((mode & 146) != 0); // 222 oct
-  }
 
   @override
   // This looks related to Dart issue 16558
@@ -749,7 +747,8 @@ class DirectoryResource extends FileEntityResource<FileSystemEntity>
 
 
 
-class FileResource extends FileEntityResource<FileSystemEntity> {
+class FileResource extends FileEntityResource<FileSystemEntity>
+    implements ResourceStreamable<DirectoryResource> {
   final File referencedFile;
 
   FileResource(File f, path.Context context, String relname) :
@@ -762,6 +761,32 @@ class FileResource extends FileEntityResource<FileSystemEntity> {
 
   @override
   bool get isDirectory => false;
+
+
+  @override
+
+  bool get readable {
+    FileStat fileStat = entity.statSync();
+    if (fileStat.type == FileSystemEntityType.NOT_FOUND) {
+      return parent.readable;
+    }
+    int mode = fileStat.mode;
+    // assume that, if any read bit is set, we can read it
+    return ((mode & 292) != 0); // 444 oct
+  }
+
+  @override
+
+  bool get writable {
+    FileStat fileStat = entity.statSync();
+    if (fileStat.type == FileSystemEntityType.NOT_FOUND) {
+      return parent.readable;
+    }
+    int mode = fileStat.mode;
+    // assume that, if any write bit is set, we can write it
+    return ((mode & 146) != 0); // 222 oct
+  }
+
 
   List<int> readAsBytes() {
     return referencedFile.readAsBytesSync();
