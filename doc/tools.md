@@ -4,7 +4,15 @@ builder.dart Tools
 `builder.dart` provides some out-of-the-box tools to help with the construction
 of builds.
 
+These are the tools used by the declarative build style.  You can find the tasks
+provided for procedural builds under the [tasks page](tasks.md).
 
+
+
+Common Usage
+------------
+
+All tools share the same general invocation usage.
 
 
 
@@ -18,21 +26,23 @@ Deletes files and directories based on a [ResourceCollection](datatypes.md).
 MkDir
 -----
 
-*import 'package:builder/std.dart*
+Creates an empty directory.
+
 
 
 Exec
 ----
 
-*import 'package:builder/std.dart*
+Runs a native application.
+
+
+Copy
+----
+
 
 
 Relationship
 ------------
-
-*included in `builder/std.dart`*
-
-**Useful only for declarative builds.**
 
 Defines an indirect relationship between one set of files and another.  For
 example, in interpreted languages (such as Dart), the unit test execution only
@@ -44,14 +54,15 @@ they test.  This relationship can be described in a [Relationship] target.
 DartAnalyzer
 ------------
 
-*import 'package:builder/dart.dart*
 
 
 UnitTests
 ---------
 
-*import 'package:builder/dart.dart*
 
+
+Dart2JS
+-------
 
 
 

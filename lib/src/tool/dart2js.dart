@@ -50,7 +50,6 @@ import '../task/dart2js.dart';
  * * `onFailure` ([FailureMode]) - how to handle a failure message from the
  *  analyzer.  Default is to quit the build with an error.
  */
-
 class Dart2JS extends BuildTool {
   final String cmd;
 
@@ -59,6 +58,9 @@ class Dart2JS extends BuildTool {
   final bool minified;
 
   final bool checked;
+
+
+  // FIXME this should only explicitly call one file.
 
   factory Dart2JS(String name,
       { String description: "", String phase: PHASE_BUILD,
