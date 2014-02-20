@@ -17,17 +17,19 @@ document generation, as part of the `pub build` tool.
 Status
 ======
 
-The tool is just in the beginnings, but already it builds itself.
+The tool supports both the procedural and declarative styles of builds.  It
+provides a small set of built-in tools to help with creating a build, but more
+are planned.
 
 The following features are planned:
 
 * Add more helper libraries to make creation of builds easier: dart, dart2js, pub, zip, unzip.
-* Update this documentation as work progresses.
 * Add support for testing frameworks like DumpRenderTree (used by Dart team's [web-ui](https://github.com/dart-lang/web-ui) project)
+* Update the documentation as work progresses.
 * Work on publicity and integration with tools like [drone.io](http://docs.drone.io/dart.html)
 
 **Because this is such an early state of the build tool, expect the API to
-change in the future.**
+change in the near-term future.**
 
 
 
@@ -194,7 +196,6 @@ The builder library is designed for use from within the Dart Editor tool, but
 it can also be run from the command-line.
 
 
-
 Run the default target:
 
 `dart build.dart`
@@ -215,49 +216,25 @@ Supported Tools
 ===============
 
 `builder` provides several tools that are usually needed as part of a normal
-build system.
+build system.  This gives a brief outline of what the tool provides.  Full
+documentation can be found under the docs directory, for both
+[declarative](docs/tools.md) and [procedural](docs/tasks.md)
 
+These are common to both styles:
 
-All Tools
----------
+* *DartAnalyzer* - runs the dartanalyzer tool over a set of Dart files.
+* *UnitTests* - runs the Dart unit tests in a file.
 
-All tools use this standard creation method, along with their own
-additional custom arguments.
+These are specific to declarative styles:
 
+* *Relationship* - declares an indirect relationship between files, such as
+ the source files that a unit test covers.
+* *Delete* - removes files and directories.
+* *MkDir* - creates empty directories.  Usually, this isn't needed, because the
+ builder tools will create directories as necessary.  However, under some
+ circumstances, you may need an empty directory created.
 
-Delete
-------
-*included in `builder/std.dart`*
-
-
-MkDir
------
-*included in `builder/std.dart`*
-
-Creates an empty directory.  Usually, this isn't needed, because the builder
-tools will create directories as necessary.  However, under some circumstances,
-you may need an empty directory created.
-
-
-Relationship
-------------
-*included in `builder/std.dart`*
-
-
-DartAnalyzer
-------------
-*included in `builder/dart.dart`*
-
-
-UnitTests
----------
-*included in `builder/dart.dart`*
-
-
-Making Your Own Tool
-====================
-
-...
+You can make your own tool if you need additional functionality.
 
 
 

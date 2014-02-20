@@ -11,9 +11,7 @@ of builds.
 Delete
 ------
 
-*import 'package:builder/std.dart*
-
-Deletes files and directories based on a [ResourceCollection].
+Deletes files and directories based on a [ResourceCollection](datatypes.md).
 
 
 
@@ -63,6 +61,8 @@ Data Types
 builder.dart uses a set of custom data types used by the various tools.  A few
 are specific to certain tools, while others are generally used by all the
 tools.
+
+The common data types can be found [here](datatypes.md).
 
 
 Resource
