@@ -124,8 +124,35 @@ abstract class Resource<T extends ResourceListable> {
     return (this.contains(other) || other.contains(this));
   }
 
+  /**
+   * Returns `true` if this [Resource] should be readable.  Issues may arrise
+   * from reading such as failure to connect to the resource.
+   *
+   * For [ResourceListable], it should return `true` if child
+   * [ResourceStreamable] can be generally assumed to be readable.
+   *
+   * For [ResourceStreamable], it returns `true` if the [#readAsBytes()],
+   * [#readAsString()], and [#openWrite()] calls are supported by this
+   * [Resource].
+   */
+  bool get readable;
+
 
   /**
+   * Returns `true` if this [Resource] should be readable.  Issues may arrise
+   * from reading such as failure to connect to the resource.
+   *
+   * For [ResourceListable], it should return `true` if child
+   * [ResourceStreamable] can be generally assumed to be readable.
+   *
+   * For [ResourceStreamable], it returns `true` if the [#writeAsBytes()],
+   * [#writeAsString()], and [#openWrite()] calls are
+   * supported by this [Resource].
+   */
+  bool get writable;
+
+
+/**
    * Checks if this [Resource] represents the exact same [Resource] as `t`.
    */
   @override
@@ -148,20 +175,6 @@ abstract class Resource<T extends ResourceListable> {
  * A [Resource] which can be read or written.
  */
 abstract class ResourceStreamable<T extends ResourceListable> extends Resource<T> {
-
-  /**
-   * Returns `true` if the [#readAsBytes()], [#readAsString()], and
-   * [#openWrite()] calls are supported by this [Resource].
-   */
-  bool get readable;
-
-
-  /**
-   * Returns `true` if the [#writeAsBytes()], [#writeAsString()], and
-   * [#openWrite()] calls are
-   * supported by this [Resource].
-   */
-  bool get writable;
 
 
   /**
@@ -496,15 +509,7 @@ abstract class FileEntityResource<T extends FileSystemEntity>
 
   FileEntityResource.inner(this.entity, this._context, this._relname);
 
-  // Implementation note: this uses static methods instead of factory methods
-  // so that the end user can receive the correct class.  However, this makes
-  // the API tricky to use, because the user needs to remember that they
-  // directly call the method, rather than using "new".
-
-  // Alternatively, the user could call the correct factory method on the
-  // real type.
-
-  static FileEntityResource fromEntity(FileSystemEntity res,
+  factory FileEntityResource.fromEntity(FileSystemEntity res,
       { path.Context context: null }) {
     if (context == null) {
       context = GLOBAL_CONTEXT;
@@ -515,21 +520,6 @@ abstract class FileEntityResource<T extends FileSystemEntity>
     return new FileEntityResource(relname, context: context,
       notFoundHint: notFoundHint);
   }
-
-
-  static DirectoryResource asDir(String relname,
-      { path.Context context: null }) {
-    return new FileEntityResource(relname, context: context,
-        notFoundHint: 'dir') as DirectoryResource;
-  }
-
-
-  static FileResource asFile(String relname,
-      { path.Context context: null }) {
-    return new FileEntityResource(relname, context: context,
-        notFoundHint: 'file') as FileResource;
-  }
-
 
 
 
@@ -655,6 +645,29 @@ abstract class FileEntityResource<T extends FileSystemEntity>
 
 
   @override
+  bool get readable {
+    FileStat fileStat = entity.statSync();
+    if (fileStat.type == FileSystemEntityType.NOT_FOUND) {
+      return parent.readable;
+    }
+    int mode = fileStat.mode;
+    // assume that, if any read bit is set, we can read it
+    return ((mode & 292) != 0); // 444 oct
+  }
+
+  @override
+  bool get writable {
+    FileStat fileStat = entity.statSync();
+    if (fileStat.type == FileSystemEntityType.NOT_FOUND) {
+      return parent.readable;
+    }
+    int mode = fileStat.mode;
+    // assume that, if any write bit is set, we can write it
+    return ((mode & 146) != 0); // 222 oct
+  }
+
+
+  @override
   bool get isLink => entity is Link;
 
   @override
@@ -678,6 +691,13 @@ abstract class FileEntityResource<T extends FileSystemEntity>
 class DirectoryResource extends FileEntityResource<FileSystemEntity>
     implements ResourceListable<FileEntityResource> {
   final Directory referencedDirectory;
+
+
+  factory DirectoryResource.named(String relname,
+      { path.Context context: null }) {
+    return new FileEntityResource(relname, context: context,
+      notFoundHint: 'dir') as DirectoryResource;
+  }
 
   DirectoryResource(Directory dir, path.Context context, String relname) :
     referencedDirectory = dir,
@@ -746,10 +766,20 @@ class DirectoryResource extends FileEntityResource<FileSystemEntity>
 }
 
 
-
+/**
+ * A file system file.
+ */
 class FileResource extends FileEntityResource<FileSystemEntity>
     implements ResourceStreamable<DirectoryResource> {
   final File referencedFile;
+
+
+  factory FileResource.named(String relname,
+      { path.Context context: null }) {
+    return new FileEntityResource(relname, context: context,
+      notFoundHint: 'file') as FileResource;
+  }
+
 
   FileResource(File f, path.Context context, String relname) :
     referencedFile = f,
@@ -761,31 +791,6 @@ class FileResource extends FileEntityResource<FileSystemEntity>
 
   @override
   bool get isDirectory => false;
-
-
-  @override
-
-  bool get readable {
-    FileStat fileStat = entity.statSync();
-    if (fileStat.type == FileSystemEntityType.NOT_FOUND) {
-      return parent.readable;
-    }
-    int mode = fileStat.mode;
-    // assume that, if any read bit is set, we can read it
-    return ((mode & 292) != 0); // 444 oct
-  }
-
-  @override
-
-  bool get writable {
-    FileStat fileStat = entity.statSync();
-    if (fileStat.type == FileSystemEntityType.NOT_FOUND) {
-      return parent.readable;
-    }
-    int mode = fileStat.mode;
-    // assume that, if any write bit is set, we can write it
-    return ((mode & 146) != 0); // 222 oct
-  }
 
 
   List<int> readAsBytes() {

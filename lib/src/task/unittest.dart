@@ -61,8 +61,8 @@ import '../../task.dart';
  *
  *
  */
-Future runSingleTest(Project proj, Resource test, List<int> errorCounts,
-    TestResultWriter resultWriter, List<String> testArgs,
+Future runSingleTest(Project proj, ResourceStreamable test,
+    List<int> errorCounts, TestResultWriter resultWriter, List<String> testArgs,
     ResourceListable summaryDir) {
   var response = new ReceivePort();
   var streamc = new StreamController<LogMessage>.broadcast(sync: true);
@@ -133,17 +133,19 @@ Future runSingleTest(Project proj, Resource test, List<int> errorCounts,
  * Outputs messages to test result files.
  */
 typedef Future TestResultWriter(Project project, DirectoryResource basedir,
-    Resource testFile, Stream<LogMessage> messages);
+    ResourceStreamable testFile, Stream<LogMessage> messages);
 
 
 /**
  * Default writer.  Outputs test results to a JSon formatted file.
  */
 final TestResultWriter JSON_TEST_RESULT_WRITER =
-    (Project project, DirectoryResource basedir, Resource testFile,
+    (Project project, DirectoryResource basedir, ResourceStreamable testFile,
     Stream<LogMessage> messages) {
   List<Map> vals = [];
-  Resource outfile = basedir.child("testresult-" + testFile.name + ".json");
+  ResourceStreamable outfile =
+      basedir.child("testresult-" + testFile.name + ".json")
+      as ResourceStreamable;
   Completer completer = new Completer.sync();
   messages.listen(
           (LogMessage msg) {

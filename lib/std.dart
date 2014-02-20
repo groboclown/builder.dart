@@ -35,39 +35,39 @@ final ResourceTest DART_FILE_FILTER = (r) =>
   (r.exists && DEFAULT_IGNORE_TEST(r) && r.name.toLowerCase().endsWith(".dart"));
 
 
-final DirectoryResource ASSET_DIR = new FileEntityResource.asDir("asset");
+final DirectoryResource ASSET_DIR = new DirectoryResource.named("asset");
 final ResourceCollection ASSET_FILES = ASSET_DIR.asCollection(
     resourceTest: DEFAULT_IGNORE_TEST, recurseTest: DEFAULT_IGNORE_TEST);
 
-final DirectoryResource BENCHMARK_DIR = new FileEntityResource.asDir("benchmark");
+final DirectoryResource BENCHMARK_DIR = new DirectoryResource.named("benchmark");
 final ResourceCollection BENCHMARK_FILES = BENCHMARK_DIR.asCollection(
     resourceTest: DART_FILE_FILTER, recurseTest: SOURCE_RECURSION_TEST);
 
-final DirectoryResource BIN_DIR = new FileEntityResource.asDir("bin");
+final DirectoryResource BIN_DIR = new DirectoryResource.named("bin");
 final ResourceCollection BIN_FILES = BIN_DIR.asCollection(
     resourceTest: DEFAULT_IGNORE_TEST, recurseTest: SOURCE_RECURSION_TEST);
 
-final DirectoryResource DOC_DIR = new FileEntityResource.asDir("doc");
+final DirectoryResource DOC_DIR = new DirectoryResource.named("doc");
 final ResourceCollection DOC_FILES = BIN_DIR.asCollection(
     resourceTest: DEFAULT_IGNORE_TEST, recurseTest: DEFAULT_IGNORE_TEST);
 
-final DirectoryResource EXAMPLE_DIR = new FileEntityResource.asDir("example");
+final DirectoryResource EXAMPLE_DIR = new DirectoryResource.named("example");
 final ResourceCollection EXAMPLE_FILES = EXAMPLE_DIR.asCollection(
     resourceTest: DEFAULT_IGNORE_TEST, recurseTest: SOURCE_RECURSION_TEST);
 
-final DirectoryResource LIB_DIR = new FileEntityResource.asDir("lib");
+final DirectoryResource LIB_DIR = new DirectoryResource.named("lib");
 final ResourceCollection LIB_FILES = LIB_DIR.asCollection(
     resourceTest: DART_FILE_FILTER, recurseTest: SOURCE_RECURSION_TEST);
 
-final DirectoryResource TEST_DIR = new FileEntityResource.asDir("test");
+final DirectoryResource TEST_DIR = new DirectoryResource.named("test");
 final ResourceCollection TEST_FILES = TEST_DIR.asCollection(
     resourceTest: DART_FILE_FILTER, recurseTest: SOURCE_RECURSION_TEST);
 
-final DirectoryResource TOOL_DIR = new FileEntityResource.asDir("tool");
+final DirectoryResource TOOL_DIR = new DirectoryResource.named("tool");
 final ResourceCollection TOOL_FILES = TOOL_DIR.asCollection(
     resourceTest: DEFAULT_IGNORE_TEST, recurseTest: SOURCE_RECURSION_TEST);
 
-final DirectoryResource WEB_DIR = new FileEntityResource.asDir("web");
+final DirectoryResource WEB_DIR = new DirectoryResource.named("web");
 final ResourceCollection WEB_FILES = WEB_DIR.asCollection(
     resourceTest: DEFAULT_IGNORE_TEST, recurseTest: DEFAULT_IGNORE_TEST);
 

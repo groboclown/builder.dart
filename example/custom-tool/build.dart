@@ -43,7 +43,7 @@ import 'dart:convert';
 
 final checkForFixmes = new NoFixmesTool("fixme",
   description: "check for fixme strings in files",
-  files: new FileEntityResource.asDir(".").asCollection(
+  files: new DirectoryResource.named(".").asCollection(
       resourceTest: DART_FILE_FILTER, recurseTest: SOURCE_RECURSION_TEST));
 
 
@@ -83,7 +83,7 @@ class NoFixmesTool extends BuildTool {
     var waiters = <Future>[];
     //var lineno = <Resource, int>{};
     var errors = 0;
-    for (Resource r in getChangedInputs().where(
+    for (ResourceStreamable r in getChangedInputs().where(
             (s) => s is ResourceStreamable && s.exists && s.readable)) {
       project.logger.info("reading " + r.relname);
       var c = new Completer();
@@ -107,7 +107,7 @@ class NoFixmesTool extends BuildTool {
           c.completeError(e, s);
         });
       } catch (e, s) {
-        completer.completeError(e, s);
+        c.completeError(e, s);
       }
       waiters.add(c.future);
     }

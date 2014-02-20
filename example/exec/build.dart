@@ -30,9 +30,6 @@ library build;
 // The build library
 import '../../lib/builder.dart';
 
-// The standard package layout definitions
-import '../../lib/std.dart';
-
 // The tools to run
 final echoWindows = new Exec("echo-windows",
   description: "run a shell command with windows",

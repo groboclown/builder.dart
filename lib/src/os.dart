@@ -60,7 +60,7 @@ Resource resolveExecutable(String name, [ List<String> additionalPath,
   if (additionalPath != null) {
     for (var p in additionalPath) {
       if (p != null) {
-        var r = new FileEntityResource.asDir(p, context: context);
+        var r = new DirectoryResource.named(p, context: context);
         if (r != null && r.exists && r.isDirectory) {
           path.add(r);
         }
@@ -69,7 +69,7 @@ Resource resolveExecutable(String name, [ List<String> additionalPath,
   }
   
   for (var ext in EXEC_EXT) {
-    var execFile = new FileEntityResource.asFile(name + ext, context: context);
+    var execFile = new FileResource.named(name + ext, context: context);
     if (execFile != null && execFile.exists && ! execFile.isDirectory) {
       return execFile;
     }
@@ -108,7 +108,7 @@ List<ResourceListable> parseDirectoryPath(String path,
   }
   var isDosLike = (context.style.name == 'windows');
   for (String p in splitPath(path, isDosLike, pathSeparatorMatcher)) {
-    var f = new FileEntityResource.asDir(p, context: context);
+    var f = new DirectoryResource.named(p, context: context);
     if (f != null && f is ResourceListable) {
       ret.add(f);
     }

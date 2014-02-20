@@ -193,8 +193,8 @@ class Exec extends BuildTool {
     }
 
     if (! cmd.exists) {
-      throw new BuildExecutionException("Could not find command " +
-        cmd.relname);
+      throw new BuildExecutionException(project.activeTarget,
+        "Could not find command " + cmd.relname);
     }
 
     project.logger.debug("Running [" + cmd.relname + "] with arguments " +
