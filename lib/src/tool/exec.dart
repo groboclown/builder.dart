@@ -72,7 +72,7 @@ class Exec extends BuildTool {
       Iterable<String> args: null, Map<String, String> env,
       bool includeParentEnvironment: true,
       bool runInShell: false, FileResource stdin, FileResource stdout,
-      FileResource stderr, bool pipeStderrToStdout,
+      FileResource stderr, bool pipeStderrToStdout: false,
       bool stdoutAppend: false, bool stderrAppend: false,
       FailureMode onErrorLaunching: null,
       FailureMode onFailure: null,
@@ -102,7 +102,9 @@ class Exec extends BuildTool {
       requiredInput.add(workingDir);
     }
 
-    if (! cmd.exists) {
+    // cmd could be null if the platform isn't a match.
+
+    if (cmd != null && ! cmd.exists) {
       requiredInput.add(cmd);
     }
 
@@ -185,8 +187,14 @@ class Exec extends BuildTool {
   Future<Project> start(Project project) {
     if (platforms.isNotEmpty &&
         ! platforms.contains(Platform.operatingSystem.toLowerCase())) {
-      project.logger.info("Cannot run " + cmd.relname + " on this operating system");
+      project.logger.info("Cannot run " +
+        (cmd == null ? name : cmd.relname) + " on this operating system");
       return new Future<Project>.sync(() => project);
+    }
+
+    if (! cmd.exists) {
+      throw new BuildExecutionException("Could not find command " +
+        cmd.relname);
     }
 
     project.logger.debug("Running [" + cmd.relname + "] with arguments " +

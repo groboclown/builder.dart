@@ -36,13 +36,14 @@ import '../../lib/std.dart';
 // The tools to run
 final echoWindows = new Exec("echo-windows",
   description: "run a shell command with windows",
-  cmd: new FileEntityResource.asFile("cmd"),
   platform: "windows",
+  cmd: resolveExecutable("cmd"),
   args: [ "/c", "echo", "hello, windows" ]);
 
 final echoNix = new Exec("echo-nix",
   description: "run a shell command with a *nix type system",
-  cmd: new FileEntityResource.asFile("bash"),
+  platforms: [ "linux", "macos" ],
+  cmd: resolveExecutable("bash"),
   args: [ "-c", "echo", "hello, bash" ]);
 
 final echo = new VirtualTarget("echo",
