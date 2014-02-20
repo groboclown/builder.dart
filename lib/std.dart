@@ -31,7 +31,7 @@ library builder.std;
 import 'src/resource.dart';
 
 
-ResourceTest DART_FILE_FILTER = (r) =>
+final ResourceTest DART_FILE_FILTER = (r) =>
   (r.exists && DEFAULT_IGNORE_TEST(r) && r.name.toLowerCase().endsWith(".dart"));
 
 

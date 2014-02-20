@@ -3,14 +3,15 @@ Creating a Custom Build Tool
 
 Though the builder.dart build system provides several build tools to get you
 started in creating the correct automated build for your needs, these won't
-cover every situtation, and you may find that you need to create a new build
+cover every situation, and you may find that you need to create a new build
 tool.
+
 
 Define the Class and Constructor
 --------------------------------
 
 You can create new custom build tools by followings a simple patern.  First,
-create a class that extends [BuildTool]:
+create a class that extends `BuildTool`:
 
     library mylib.build
 
@@ -64,9 +65,10 @@ below.
 
 The `depends` argument is a list of other build tool names that the user can
 pass in to force this tool to run after them.  The call to
-`BuildTool.mkTargetDef` uses this, and an additional list of strings (above
-just passed as `<String>[]`) as weak dependencies, creates the correct
-dependency chain.
+`BuildTool.mkTargetDef` uses this dependency list, and an additional list of
+strings for the weak dependencies (the example above just passed it as
+`<String>[]`), and the pipe, creates the correct dependency chain.
+
 
 Performing The Action
 ---------------------
@@ -90,7 +92,15 @@ Pipes
 -----
 
 
+
+
+Errors
+------
+
+
 Project
 -------
 
 
+Resources
+---------
