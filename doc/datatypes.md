@@ -16,7 +16,23 @@ directory, but can represent a URI, or the contents of a zip file, or some
 virtual construct to represent an idea of an output (say, a process ID to
 represent a server that was started by the build).
 
+Individual resources that can be directly read or written to implement the
+`ResourceStreamable` class.  The `FileResource` is one example, and a web page
+is another example.
+
+Resources that contain groups of other resources implement the
+`ResourceListable` class.  These should know how to extract the contents of
+the resource, but that's not necessarily a requirement.  For example, a URL
+can be both a web page and a parent to many other web pages, but the code
+doesn't necessarily know about the names of all the children pages.  However,
+a `ResourceListable` class allows for users to easily create child resources.
+
+
 _TODO describe how to create and use file and directory resources._
+
+
+
+
 
 
 ResourceCollection

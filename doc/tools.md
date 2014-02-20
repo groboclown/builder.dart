@@ -36,6 +36,7 @@ Exec
 Runs a native application.
 
 
+
 Copy
 ----
 
@@ -74,23 +75,4 @@ are specific to certain tools, while others are generally used by all the
 tools.
 
 The common data types can be found [here](datatypes.md).
-
-
-Resource
---------
-
-A [Resource] object references streamable object or a container for streamable
-objects.  Commonly, this refers to files and directories, but can also refer
-to URI network resources.
-
-_TODO add more info about usage of a resource._
-
-
-ResourceCollection
-------------------
-
-Simply put, a [ResourceCollection] contains a set of [Resources].  Unlike a
-[ResourceListable], it does not allow for direct interaction with the underlying
-resources.
-
 
