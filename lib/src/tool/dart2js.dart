@@ -35,19 +35,23 @@ import '../../tool.dart';
 import '../task/dart2js.dart';
 
 /**
- * Build tool for running the `dart2js` tool on a set of input files.
+ * Build tool for running the `dart2js` tool on a single input Dart file.
  * It takes the following arguments, in addition to the normal build tool
  * arguments:
  *
- * * `cmd` ([String]) - the actual command to run.  By default, this is
+ * * [cmd] ([String]) - the actual command to run.  By default, this is
  *  found using the `DART_HOME` or `DART_SDK` environment variable, under
  *  the `bin/dartanalyzer` name.
- * * `dartFiles` ([ResourceSet]) - all the files to analyze.  For each file
- *  in this set, the analyzer will be called once.  This most probably will
- *  cause the analyzer to check the same file multiple times, so you can
- *  optimize your build to just include the entry files.  For safety, this
- *  can just be every dart file, but will run slower.
- * * `onFailure` ([FailureMode]) - how to handle a failure message from the
+ * * [dartFile] ([ResourceStreamable]) - the file to convert.  For now, this
+ *    must be an actual [FileResource].  Eventually this may allow for writing
+ *    it to a temporary file.
+ * * [outDir] ([DirectoryResource]) - the output directory to write the
+ *    generated output.  Use either this value or the [outputFile] argument,
+ *    but not both.  For this one, the generated name will be
+ *    `(outDir)/(dartFile name).js`.
+ * * [outputFile] ([FileResource]) - the output filename.  Use either this value
+ *    or [outDir], but not both.  If both are specified, [outputFile] will win.
+ * * [onFailure] ([FailureMode]) - how to handle a failure message from the
  *  analyzer.  Default is to quit the build with an error.
  */
 class Dart2JS extends BuildTool {
@@ -59,32 +63,28 @@ class Dart2JS extends BuildTool {
 
   final bool checked;
 
-
   // FIXME this should only explicitly call one file.
 
   factory Dart2JS(String name,
       { String description: "", String phase: PHASE_BUILD,
-      ResourceCollection dartFiles: null, List<String> depends: null,
-      bool minified: false, bool checked: true, DirectoryResource outdir: null,
+      ResourceStreamable dartFile: null, List<String> depends: null,
+      bool minified: false, bool checked: true,
+      DirectoryResource outDir: null, FileResource outputFile: null,
       String cmd: null, FailureMode onFailure: null }) {
     if (depends == null) {
       depends = <String>[];
     }
 
-    if (outdir == null) {
-      throw new BuildSetupException("outdir was not set");
-    }
-
-    // FIXME this needs a better mapping.  Perhaps user-defined via the
-    // Relation classes?
-    var direct = <Resource, List<Resource>>{};
-    for (var f in dartFiles.entries()) {
-      if (f is ResourceStreamable) {
-        direct[f] = <Resource>[ outdir.child(f.name + ".js", 'file') ];
+    if (outputFile == null) {
+      if (outDir == null) {
+        throw new BuildSetupException(
+            "neither outDir nor outputFile were set");
       }
+      outputFile = outDir.child(dartFile.name + ".js", 'file');
     }
 
-    var pipe = new Pipe.direct(direct);
+
+    var pipe = new Pipe.single(dartFile, outputFile);
     var targetDef = BuildTool.mkTargetDef(name, description, phase, pipe,
     depends, <String>[]);
     return new Dart2JS._(name, targetDef, phase, pipe, minified, checked,
