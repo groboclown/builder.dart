@@ -246,7 +246,7 @@ class Exec extends BuildTool {
     }).then((int code) {
       project.logger.info("Completed " + cmd.relname + " with exit code " +
         code.toString());
-      if (code != 0 && onFailure != null) {
+      if (code != 0) {
         handleFailure(project,
           mode: onFailure,
           failureMessage: cmd.relname + " exited with " + code.toString(),
