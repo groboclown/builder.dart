@@ -27,7 +27,8 @@ library builder.src.tool.copy;
 /**
  * Copies files.
  *
- * Future support will need to include a simple templating (filter) support.
+ * Future support will need to include a simple templating (filter) support,
+ * and name mapping.
  */
 
 import 'dart:async';
@@ -104,6 +105,11 @@ class Copy extends BuildTool {
       bool overwrite: false, FailureMode onFailure: null
       }) {
 
+    if (src == dest) {
+      throw new BuildSetupException(
+          "copy does not allow the source directory and destination directory to match (${src})");
+    }
+
     var pipe = new Pipe.single(src, dest);
 
     var targetDef = BuildTool.mkTargetDef(name, description, phase, pipe,
@@ -163,27 +169,43 @@ class Copy extends BuildTool {
     if (input != null && input is ResourceStreamable) {
       var f = _copyFile(input, output);
       if (f != null) {
+        f.catchError((e, s) {
+          hasErrors = true;
+        });
         ret = f.then((_) => ret);
+      } else {
+        hasErrors = true;
       }
     } else {
       for (var r in pipe.requiredInput) {
         if (! r.exists || ! r.readable) {
-          // FIXME handle error
-
+          project.logger.fileWarn(tool: "copy",
+            file: r, message: "source file does not exist or is not readable");
         } else if (r is ResourceListable) {
           for (var c in r.list()) {
-            var f = _copyRelFile(c, output);
+            var f = _copyRelFile(project, c);
             if (f != null) {
+              f.catchError((e, s) {
+                hasErrors = true;
+              });
               ret = f.then((_) => ret);
+            } else {
+              hasErrors = true;
             }
           }
         } else if (r is ResourceStreamable) {
-          var f = _copyRelFile(r, output);
+          var f = _copyRelFile(project, r);
           if (f != null) {
+            f.catchError((e, s) {
+              hasErrors = true;
+            });
             ret = f.then((_) => ret);
+          } else {
+            hasErrors = true;
           }
         } else {
-          // FIXME handle error
+          project.logger.fileWarn(tool: "copy",
+            file: r, message: "unknown file type " + f.dynamicType);
         }
       }
     }
@@ -191,22 +213,58 @@ class Copy extends BuildTool {
   }
 
 
-  Future _copyRelFile(ResourceStreamable source) {
-    var sname = c.relname;
+  Future _copyRelFile(Project project, ResourceStreamable source) {
+    var sname = source.relname;
     if (input != null) {
       sname = (input as ResourceListable).relativeChildName(source);
       if (sname == null) {
-        // FIXME handle error
+        project.logger.fileError(tool: "copy", file: source,
+          message: "cannot map from ${source} into ${input}");
+        return null;
       }
     }
-    return _copyFile(source, (output as ResourceListable).child(sname));
+    return _copyFile(project, source,
+      (output as ResourceListable).child(sname));
   }
 
 
 
-  Future _copyFile(ResourceStreamable source, ResourceStreamable target) {
-    // FIXME
+  Future _copyFile(Project project, ResourceStreamable source,
+      ResourceStreamable target) {
+    project.logger.fileInfo(tool: "copy", file: target,
+      message: "copying ${source} to ${target}");
+    try {
+      Completer completer = new Completer();
+
+      // FIXME include error handling
+      IOSink outp = target.openWrite(encoding: encoding);
+      Stream<List<int>> inp = source.openRead();
+      inp.listen((List<int> data) {
+        try {
+          outp.add(data);
+        } catch (e, s) {
+          outp.close();
+          target.delete();
+          project.logger.fileError(tool: "copy", file: target,
+            message: "failed to copy ${source} to ${target}");
+          completer.completeError(e, s);
+        }
+      }, onDone: () {
+        outp.close();
+        completer.complete();
+      }, onError: (e, s) {
+        outp.close();
+        target.delete(false);
+        project.logger.fileError(tool: "copy", file: source,
+          message: "failed to copy ${source} to ${target}");
+        completer.completeError(e, s);
+      }, cancelOnError: true);
+
+      return completer.future;
+    } catch (e, s) {
+      project.logger.fileError(tool: "copy", file: source,
+        message: "problem copying from ${source} to ${target}: ${e}");
+      return null;
+    }
   }
-
-
 }

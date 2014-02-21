@@ -29,6 +29,7 @@
 library builder.src.tools;
 
 export 'dart_path.dart';
+export 'tool/copy.dart';
 export 'tool/dart.dart';
 export 'tool/dart2js.dart';
 export 'tool/dartanalyzer.dart';

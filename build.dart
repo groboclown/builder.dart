@@ -67,7 +67,11 @@ final dart2js = new Dart2JS("dart2js",
     dartFile: new FileResource.named("lib/src/argparser.dart"),
     outDir: OUTPUT_DIR);
 
-
+// FOR TESTING
+final copy = new Copy.dir("export-docs",
+    description: "Export documents into the work directory",
+    src: DOC_DIR,
+    dest: OUTPUT_DIR.child("docs/"));
 
 
 void main(List<String> args) {
