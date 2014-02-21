@@ -88,9 +88,11 @@ abstract class TargetMethod {
 
   /**
    * Performs the operation of the target.  It throws a [BuildException]
-   * on an error (see [exceptions.dart]).
+   * on an error (see [exceptions.dart]).  A return value of `null` indicates
+   * that all processing occurred within the call, otherwise it returns a
+   * [Future] object that completes when the target completes.
    */
-  Future<Project> start(Project project);
+  Future start(Project project);
 }
 
 
@@ -104,12 +106,10 @@ class AnnotatedTarget extends TargetMethod {
     super(MirrorSystem.getName(method.simpleName), targetDef);
 
   @override
-  Future<Project> start(Project project) {
-    return new Future<Project>(() {
+  Future start(Project project) {
+    return new Future(() {
       InstanceMirror im = owner.invoke(method.simpleName, [ project ]);
       // Does this need explicit error checking?
-
-      return project;
     });
   }
 

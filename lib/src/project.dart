@@ -104,7 +104,9 @@ class Project {
 
   /**
    * Run the full build for this specific [TargetMethod].  It will not repeat
-   * any target that has already been run in this project.
+   * any target that has already been run in this project.  Returns a
+   * [Future] that completes when the build targets complete, along with an
+   * exit code for the build.
    */
   Future<int> buildTargets(List<TargetMethod> targets) {
     if (targets == null) {
@@ -112,8 +114,8 @@ class Project {
     }
 
     Project parent = this;
-    Future<Project> rootFuture = new Future<Project>.sync(() => parent);
-    Future<Project> future = rootFuture;
+    Future rootFuture = new Future.sync(() => null);
+    Future future = rootFuture;
     StreamController<int> statusStream = new StreamController<int>();
 
     runZoned(() {
@@ -123,24 +125,29 @@ class Project {
       for (TargetMethod tm in _dependencyList(targets, _invokedTargets.isEmpty)) {
         if (! _invokedTargets.contains(tm)) {
           addedCount++;
-          future = future.then((parent) {
+          future = future.then((_) {
             if (_checkErrors()) {
               return rootFuture;
             }
             var p = new _ChildProject(parent, tm);
             p.logger.info("=>");
-            return tm.start(p)
-              .then((pr) {
-                pr.logger.info("<=");
+            var f = tm.start(p);
+            if (f == null) {
+              p.logger.info("<=");
+              return rootFuture;
+            } else {
+              return f.then((_) {
+                p.logger.info("<=");
                 return rootFuture;
-              });
+              }).then((_) => rootFuture);
+            }
           });
           _invokedTargets.add(tm);
         }
       }
 
       if (addedCount <= 0) {
-        future = future.then((p) => _baseLogger.output(null, new LogMessage(
+        future = future.then((_) => _baseLogger.output(null, new LogMessage(
           level: ERROR,
           message: "Nothing to do.  Use '--help' to see all the options.")));
       }

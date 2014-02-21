@@ -184,12 +184,12 @@ class Exec extends BuildTool {
 
 
   @override
-  Future<Project> start(Project project) {
+  Future start(Project project) {
     if (platforms.isNotEmpty &&
         ! platforms.contains(Platform.operatingSystem.toLowerCase())) {
       project.logger.info("Cannot run " +
         (cmd == null ? name : cmd.relname) + " on this operating system");
-      return new Future<Project>.sync(() => project);
+      return null;
     }
 
     if (! cmd.exists) {
@@ -252,7 +252,7 @@ class Exec extends BuildTool {
           failureMessage: cmd.relname + " exited with " + code.toString(),
           resource: cmd);
       }
-      return new Future.value(project);
+      return new Future.value(null);
     });
   }
 

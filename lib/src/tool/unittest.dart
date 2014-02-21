@@ -111,28 +111,22 @@ class UnitTests extends BuildTool {
 
 
   @override
-  Future<Project> start(Project project) {
+  Future start(Project project) {
     var inp = getChangedInputs();
     if (inp.isEmpty) {
       project.logger.info("nothing to do");
-      return new Future<Project>.sync(() => project);
+      return null;
     }
     project.logger.debug("tests to run: " + inp.toString());
 
     var errorCounts = <int>[];
-    Future runner = null;
+    Future runner = new Future.value(null);
     for (Resource r in inp) {
-      Future next(_) {
+      runner = runner.then((_) => new Future(() {
         project.logger.info("Running test file " + r.name);
         return runSingleTest(project, r, errorCounts, resultWriter,
-            testArgs, summaryDir);
-      }
-      if (runner == null) {
-        runner = next(project);
-      }
-      else {
-        runner = runner.then(next);
-      }
+        testArgs, summaryDir);
+      }));
     }
 
     return runner
@@ -142,7 +136,7 @@ class UnitTests extends BuildTool {
         mode: onFailure,
         failureMessage: "one or more tests had errors");
       }
-      return new Future<Project>.sync(() => project);
+      return null;
     });
   }
 

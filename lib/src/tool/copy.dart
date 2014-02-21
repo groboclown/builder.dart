@@ -33,6 +33,7 @@ library builder.src.tool.copy;
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 
 import '../../tool.dart';
 
@@ -53,7 +54,7 @@ class Copy extends BuildTool {
 
   final Resource input;
 
-  final String encoding;
+  final Encoding encoding;
 
   bool get isText => encoding != null;
 
@@ -64,7 +65,7 @@ class Copy extends BuildTool {
       String description: "", String phase: PHASE_ASSEMBLE,
       List<String> depends: null, ResourceStreamable src: null,
       ResourceStreamable destFile: null, ResourceListable destDir: null,
-      String encoding: null,
+      Encoding encoding: null,
       bool overwrite: false, FailureMode onFailure: null
       }) {
 
@@ -101,7 +102,7 @@ class Copy extends BuildTool {
   factory Copy.dir(String name, {
       String description: "", String phase: PHASE_ASSEMBLE,
       List<String> depends: null, ResourceListable src: null,
-      ResourceListable dest: null, String encoding: null,
+      ResourceListable dest: null, Encoding encoding: null,
       bool overwrite: false, FailureMode onFailure: null
       }) {
 
@@ -123,7 +124,7 @@ class Copy extends BuildTool {
   factory Copy.collection(String name, {
       String description: "", String phase: PHASE_ASSEMBLE,
       List<String> depends: null, ResourceCollection src: null,
-      ResourceListable dest: null, String encoding: null,
+      ResourceListable dest: null, Encoding encoding: null,
       ResourceListable rootDir: null, // can be null
       bool overwrite: false, FailureMode onFailure: null
       }) {
@@ -140,7 +141,7 @@ class Copy extends BuildTool {
 
 
   Copy._(String name, TargetDef targetDef, String phase, Pipe pipe,
-      bool overwrite, String encoding, FailureMode onFailure,
+      bool overwrite, Encoding encoding, FailureMode onFailure,
       Resource input, Resource output) :
     this.overwrite = overwrite,
     this.onFailure = onFailure,
@@ -157,38 +158,32 @@ class Copy extends BuildTool {
 
     var hasErrors = false;
 
-    var ret = new Future<Project>(() {
-      if (hasErrors) {
-        handleFailure(project,
-          mode: onFailure,
-          failureMessage: "failed on copy",
-          resource: input);
-      }
-      return project;
-    });
+    var ret = new Future.value(null);
     if (input != null && input is ResourceStreamable) {
-      var f = _copyFile(input, output);
+      var f = _copyFile(project, input, output);
       if (f != null) {
         f.catchError((e, s) {
           hasErrors = true;
         });
-        ret = f.then((_) => ret);
+        ret = ret.then((_) => f);
       } else {
         hasErrors = true;
       }
     } else {
       for (var r in pipe.requiredInput) {
         if (! r.exists || ! r.readable) {
-          project.logger.fileWarn(tool: "copy",
+          project.logger.fileWarn(
             file: r, message: "source file does not exist or is not readable");
         } else if (r is ResourceListable) {
           for (var c in r.list()) {
             var f = _copyRelFile(project, c);
             if (f != null) {
               f.catchError((e, s) {
+                project.logger.fileException(
+                    file: r, exception: s, stackTrace: s);
                 hasErrors = true;
               });
-              ret = f.then((_) => ret);
+              ret = ret.then((_) => f);
             } else {
               hasErrors = true;
             }
@@ -197,19 +192,28 @@ class Copy extends BuildTool {
           var f = _copyRelFile(project, r);
           if (f != null) {
             f.catchError((e, s) {
+              project.logger.fileException(
+                  file: r, exception: s, stackTrace: s);
               hasErrors = true;
             });
-            ret = f.then((_) => ret);
+            ret = ret.then((_) => f);
           } else {
             hasErrors = true;
           }
         } else {
-          project.logger.fileWarn(tool: "copy",
-            file: r, message: "unknown file type " + f.dynamicType);
+          project.logger.fileWarn(
+            file: r, message: "unknown file type " + r.runtimeType);
         }
       }
     }
-    return ret;
+    return ret.then((_) {
+      if (hasErrors) {
+        handleFailure(project,
+          mode: onFailure,
+          failureMessage: "failed on copy",
+          resource: input);
+      }
+    });
   }
 
 
@@ -244,7 +248,7 @@ class Copy extends BuildTool {
           outp.add(data);
         } catch (e, s) {
           outp.close();
-          target.delete();
+          target.delete(false);
           project.logger.fileError(tool: "copy", file: target,
             message: "failed to copy ${source} to ${target}");
           completer.completeError(e, s);
@@ -255,6 +259,8 @@ class Copy extends BuildTool {
       }, onError: (e, s) {
         outp.close();
         target.delete(false);
+        project.logger.fileException(
+            file: source, exception: s, stackTrace: s);
         project.logger.fileError(tool: "copy", file: source,
           message: "failed to copy ${source} to ${target}");
         completer.completeError(e, s);

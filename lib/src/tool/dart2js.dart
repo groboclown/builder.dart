@@ -102,12 +102,12 @@ class Dart2JS extends BuildTool {
 
 
   @override
-  Future<Project> start(Project project) {
+  Future start(Project project) {
     var inp = getChangedInputs();
 
     if (inp.isEmpty) {
       project.logger.info("nothing to do");
-      return new Future<Project>.sync(() => project);
+      return null;
     }
 
     var hadErrors = false;
@@ -150,7 +150,6 @@ class Dart2JS extends BuildTool {
         mode: onFailure,
         failureMessage: "one or more files had errors");
       }
-      return new Future<Project>.sync(() => project);
     });
     return ret;
   }

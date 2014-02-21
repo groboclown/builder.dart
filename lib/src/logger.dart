@@ -61,31 +61,52 @@ class Logger {
         level: ERROR, tool: _target.name, message: message));
   }
 
-  void fileInfo({ String tool: "internal",
+  void exception(var exception, [ StackTrace stackTrace ]) {
+    _logger.output(_target, new LogExceptionMessage(
+        tool: _target.name, message: exception == null ? "exception" :
+          exception.toString(), exception: exception, stackTrace: stackTrace));
+  }
+
+  void fileInfo({ String tool: null,
       String category: "INTERNAL", String id: "UNKNOWN",
       Resource file: null, int line: 1, int charStart: 0, int charEnd: 0,
       String message: null }) {
     _logger.output(_target, new LogResourceMessage(
+        tool: tool == null ? _target.name : tool,
         level: INFO, category: category, id: id, file: file, line: line,
         charStart: charStart, charEnd: charEnd, message: message));
   }
 
-  void fileWarn({ String tool: "internal",
+  void fileWarn({ String tool: null,
       String category: "INTERNAL", String id: "UNKNOWN",
       Resource file: null, int line: 1, int charStart: 0, int charEnd: 0,
       String message: null }) {
     _logger.output(_target, new LogResourceMessage(
+        tool: tool == null ? _target.name : tool,
         level: WARNING, category: category, id: id, file: file, line: line,
         charStart: charStart, charEnd: charEnd, message: message));
   }
 
-  void fileError({ String tool: "internal",
+  void fileError({ String tool: null,
       String category: "INTERNAL", String id: "UNKNOWN",
       Resource file: null, int line: 1, int charStart: 0, int charEnd: 0,
       String message: null }) {
     _logger.output(_target, new LogResourceMessage(
+        tool: tool == null ? _target.name : tool,
         level: ERROR, category: category, id: id, file: file, line: line,
         charStart: charStart, charEnd: charEnd, message: message));
+  }
+
+  void fileException({
+      String tool: null, String category: "INTERNAL", String id: "UNKNOWN",
+      Resource file: null, int line: 1, int charStart: 0, int charEnd: 0,
+      String message: null, var exception, StackTrace stackTrace: null }) {
+    _logger.output(_target, new LogExceptionMessage(
+        tool: tool == null ? _target.name : tool,
+        message: exception == null ? "exception" :
+        exception.toString(), exception: exception, stackTrace: stackTrace,
+        category: category, id: id, file: file, line: line,
+        charStart: charStart, charEnd: charEnd));
   }
 
   void message(LogMessage msg) {
@@ -132,6 +153,17 @@ class LogMessage {
     return new LogResourceMessage(level: level, tool: tool, category: category,
       id: id, file: file, line: line, charStart: charStart, charEnd: charEnd,
       message: message);
+  }
+
+
+  factory LogMessage.exception({ String level: ERROR, String tool: "internal",
+      String category: "INTERNAL", String id: "UNKNOWN",
+      Resource file: null, int line: 1, int charStart: 0, int charEnd: 0,
+      String message: null, var exception: null,
+      StackTrace stackTrace: null }) {
+    return new LogExceptionMessage(level: level, tool: tool, category: category,
+      id: id, file: file, line: line, charStart: charStart, charEnd: charEnd,
+      message: message, exception: exception, stackTrace: stackTrace);
   }
 
 
@@ -225,6 +257,38 @@ class LogResourceMessage extends LogToolMessage {
   }
 
 }
+
+
+
+class LogExceptionMessage extends LogResourceMessage {
+  var exception;
+  StackTrace stackTrace;
+
+
+
+  LogExceptionMessage({ String level: ERROR, String tool: "internal",
+      String category: "INTERNAL", String id: "UNKNOWN",
+      Resource file: null, int line: 1, int charStart: 0, int charEnd: 0,
+      String message: null, String message_type: "exception",
+      var exception: null, StackTrace stackTrace: null }) :
+    this.exception = exception,
+    this.stackTrace = stackTrace,
+    super(level: level, tool: tool, category: category, id: id,
+      message: message, message_type: message_type, file: file,
+      line: line, charStart: charStart, charEnd: charEnd);
+
+  @override
+  Map<String, dynamic> createParams() {
+    var params = super.createParams();
+    params.addAll(<String, dynamic>{
+        "exception": exception == null ? null : exception.toString(),
+        "stackTrace": stackTrace == null ? null : stackTrace.toString()
+    });
+    return params;
+  }
+
+}
+
 
 
 /**

@@ -50,7 +50,7 @@ final checkForFixmes = new NoFixmesTool("fixme",
 // The primary build
 
 void main(List<String> args) {
-// Run the build
+  // Run the build
   build(args);
 }
 
@@ -78,8 +78,8 @@ class NoFixmesTool extends BuildTool {
 
 
   @override
-  Future<Project> start(Project project) {
-    var ret = new Future<Project>(() => project);
+  Future start(Project project) {
+    var ret = new Future.value(null);
     var waiters = <Future>[];
     //var lineno = <Resource, int>{};
     var errors = 0;
@@ -117,7 +117,6 @@ class NoFixmesTool extends BuildTool {
           mode: onFailure,
           failureMessage: "one or more files contained the 'FIXME' string");
       }
-      return ret;
     });
   }
 }

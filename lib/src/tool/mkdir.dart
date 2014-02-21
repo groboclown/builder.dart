@@ -64,33 +64,24 @@ class MkDir extends BuildTool {
 
 
   @override
-  Future<Project> start(Project project) {
+  Future start(Project project) {
     var out = pipe.output;
     if (out.isEmpty) {
       project.logger.info("nothing to do");
-      return new Future<Project>.sync(() => project);
+      return null;
     }
 
     var problems = <Resource>[];
-    Future ret = null;
+    Future ret = new Future.value(null);
     for (Resource r in out) {
       if (! r.exists && r is DirectoryResource) {
-        if (ret != null) {
-          ret = (r.entity as Directory).create(recursive: true).
-            catchError((error) {
-              problems.add(r);
-            });
-        } else {
-          ret = ret.then((_) => (r.entity as Directory).create(recursive: true).
-            catchError((error) {
+        ret = ret.then((_) => (r.entity as Directory).create(recursive: true).
+            catchError((error, stack) {
+              project.logger.fileException(file: r, exception: error,
+                stackTrace: stack);
               problems.add(r);
             }));
-        }
       }
-    }
-    if (ret == null) {
-      project.logger.info("nothing to do");
-      return new Future<Project>.sync(() => project);
     }
 
     ret.then((_) {
@@ -100,7 +91,6 @@ class MkDir extends BuildTool {
           failureMessage: "could not create the following directories: " +
             problems.toString());
       }
-      return project;
     });
   }
 }

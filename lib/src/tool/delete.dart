@@ -64,30 +64,28 @@ class Delete extends BuildTool {
 
 
   @override
-  Future<Project> start(Project project) {
+  Future start(Project project) {
     var inp = _files.entries();
     if (inp.isEmpty) {
       project.logger.info("nothing to do");
-      return new Future<Project>.sync(() => project);
+      return null;
     }
 
-    return new Future<Project>.sync(() {
-      var problems = <Resource>[];
-      for (Resource r in inp) {
-        if (r.exists) {
-          if (! r.delete(false)) {
-            problems.add(r);
-          }
+    var problems = <Resource>[];
+    for (Resource r in inp) {
+      if (r.exists) {
+        if (! r.delete(false)) {
+          problems.add(r);
         }
       }
-      if (problems.isNotEmpty) {
-        handleFailure(project,
-          mode: onFailure,
-          failureMessage: "could not remove the following files: " +
-            problems.toString());
-      }
-      return new Future<Project>.sync(() => project);
-    });
+    }
+    if (problems.isNotEmpty) {
+      handleFailure(project,
+        mode: onFailure,
+        failureMessage: "could not remove the following files: " +
+          problems.toString());
+    }
+    return null;
   }
 }
 

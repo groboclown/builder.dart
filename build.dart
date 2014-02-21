@@ -71,7 +71,7 @@ final dart2js = new Dart2JS("dart2js",
 final copy = new Copy.dir("export-docs",
     description: "Export documents into the work directory",
     src: DOC_DIR,
-    dest: OUTPUT_DIR.child("docs/"));
+    dest: OUTPUT_DIR.child("docs/") as ResourceListable);
 
 
 void main(List<String> args) {

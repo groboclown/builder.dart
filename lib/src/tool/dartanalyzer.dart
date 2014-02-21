@@ -102,12 +102,12 @@ class DartAnalyzer extends BuildTool {
 
 
   @override
-  Future<Project> start(Project project) {
+  Future start(Project project) {
     var inp = getChangedInputs();
 
     if (inp.isEmpty) {
       project.logger.info("nothing to do");
-      return new Future<Project>.sync(() => project);
+      return null;
     }
 
     var uniqueLines = new Set<String>();
@@ -132,21 +132,15 @@ class DartAnalyzer extends BuildTool {
     // Chain the calls, rather than running in parallel.
     // For running in parallel, we create all the Futures in the
     // calls to dartAnalyzer, then return a Future.wait() on all of them.
-    Future ret = null;
+    var ret = new Future.value(null);
     for (Resource r in inp) {
       if (r.exists && r is ResourceStreamable) {
-        Future next(_) {
+        ret = ret.then((_) => new Future(() {
           return dartAnalyzer(r, project.logger, messages,
           packageRoot: packageRoot, cmd: cmd,
           uniqueLines: uniqueLines,
           activeTarget: project.activeTarget);
-        }
-        if (ret == null) {
-          ret = next(project);
-        }
-        else {
-          ret = ret.then(next);
-        }
+        }));
       }
     }
     ret = ret.then((_) {
