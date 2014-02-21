@@ -135,12 +135,12 @@ class DartAnalyzer extends BuildTool {
     var ret = new Future.value(null);
     for (Resource r in inp) {
       if (r.exists && r is ResourceStreamable) {
-        ret = ret.then((_) => new Future(() {
-          return dartAnalyzer(r, project.logger, messages,
-          packageRoot: packageRoot, cmd: cmd,
-          uniqueLines: uniqueLines,
-          activeTarget: project.activeTarget);
-        }));
+        ret = ret.then((_) => new Future(() =>
+          dartAnalyzer(r, project.logger, messages,
+            packageRoot: packageRoot, cmd: cmd,
+            uniqueLines: uniqueLines,
+            activeTarget: project.activeTarget)
+        ));
       }
     }
     ret = ret.then((_) {

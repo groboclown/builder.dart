@@ -37,6 +37,7 @@ export 'src/resource.dart';
 export 'src/failure.dart' show
     FailureMode, Failure,
     DEFAULT_FAILURE_MODE, IGNORE_FAILURE, WARN_ON_FAILURE, STOP_ON_FAILURE;
+export 'src/translatepath.dart';
 
 export 'src/os.dart' show
     resolveExecutable;
