@@ -79,9 +79,9 @@ class PathTranslator {
  * A [ResourceListable] that has its contents as the translated source
  * resources.
  */
-class TranslateResourceListable<T extends Resource> extends ResourceListable {
+class TranslateResourceListable<T extends Resource, V extends ResourceListable> extends ResourceListable<T, V> {
   final ResourceListable srcLocation;
-  final ResourceListable<T> destLocation;
+  final ResourceListable<T, V> destLocation;
   final TranslatePath translator;
 
   TranslateResourceListable(this.srcLocation, this.destLocation,
@@ -106,7 +106,7 @@ class TranslateResourceListable<T extends Resource> extends ResourceListable {
   bool get exists => destLocation.exists;
 
   @override
-  ResourceListable get parent => destLocation.parent;
+  V get parent => destLocation.parent;
 
   @override
   path.Context get context => destLocation.context;

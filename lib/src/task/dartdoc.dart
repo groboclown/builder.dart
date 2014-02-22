@@ -82,6 +82,7 @@ Future dartDoc(Logger logger, StreamController<LogMessage> messages,
     args.add('--no-code');
   }
   if (mode != null) {
+    args.add("--mode");
     args.add(mode.arg);
   }
   if (generateAppCache) {
@@ -94,7 +95,7 @@ Future dartDoc(Logger logger, StreamController<LogMessage> messages,
     args.add('--verbose');
   }
   if (includeApi) {
-    args.add('--includeApi');
+    args.add('--include-api');
   }
   if (linkApi) {
     args.add('--link-api');
@@ -127,11 +128,14 @@ Future dartDoc(Logger logger, StreamController<LogMessage> messages,
       ..add('--out')
       ..add(outDir.relname);
   }
-  if (packageRoot != null) {
-    args
-      ..add('--package-root')
-      ..add(packageRoot.relname);
+
+  // looks like this is required
+  if (packageRoot == null) {
+    packageRoot = new DirectoryResource.named('packages');
   }
+  args
+    ..add('--package-root')
+    ..add(packageRoot.relname);
   if (libraryRoot != null) {
     args
       ..add('--library-root')
@@ -161,7 +165,7 @@ Future dartDoc(Logger logger, StreamController<LogMessage> messages,
   }).then((code) {
     logger.fileInfo(
         file: dartFiles.first,
-        message: "Completed processing " + dartFiles);
+        message: "Completed processing " + dartFiles.toString());
     return messages.close().then((_) => code);
   });
 }

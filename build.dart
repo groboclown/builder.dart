@@ -32,6 +32,7 @@ import 'package:builder/std.dart';
 final DirectoryResource OUTPUT_DIR = new DirectoryResource.named(".work/");
 final DirectoryResource TEST_SUMMARY_DIR =
   OUTPUT_DIR.child("test-results/");
+final DirectoryResource GEN_DOC_DIR = OUTPUT_DIR.child("docs/api/");
 
 // File mapping
 final unitTestSources = new Relationship("src-to-tests",
@@ -58,6 +59,15 @@ final unitTests = new UnitTests("test",
     description: "Run unit tests and generate summary report",
     testFiles: TEST_FILES,
     summaryDir: TEST_SUMMARY_DIR);
+
+
+final dartDocs = new DartDoc("dartdoc",
+    description: "Generate API documentation",
+    dartFiles: [ LIB_DIR.child("tool.dart"), LIB_DIR.child("make.dart"),
+      LIB_DIR.child("builder.dart"), LIB_DIR.child("unittest.dart") ],
+    excludeLibs: [ 'ansicolor' ],
+    outDir: GEN_DOC_DIR,
+    generateAppCache: true, linkApi: true);
 
 
 // FOR TESTING

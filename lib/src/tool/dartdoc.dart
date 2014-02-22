@@ -61,7 +61,7 @@ class DartDoc extends BuildTool {
   // FIXME this should only explicitly call one file.
 
   factory DartDoc(String name,
-      { String description: "", String phase: PHASE_BUILD,
+      { String description: "", String phase: PHASE_ASSEMBLE,
       Iterable<String> depends, FailureMode onFailure,
       String cmd: null, FileResource dartFile, Iterable<FileResource> dartFiles,
       DirectoryResource outDir: null, DirectoryResource libraryRoot: null,
@@ -98,8 +98,10 @@ class DartDoc extends BuildTool {
 
     var targetDef = BuildTool.mkTargetDef(name, description, phase, pipe,
       depends, <String>[]);
-    return new DartDoc._(name, targetDef, phase, pipe, minified, checked,
-    cmd, onFailure);
+    return new DartDoc._(name, targetDef, phase, pipe, onFailure, cmd, outDir,
+      libraryRoot, packageRoot, includeCode, mode, generateAppCache,
+      omitGenerationTime, verbose, includeApi, linkApi, showPrivate, showInheritance,
+      includeLibs, excludeLibs);
   }
 
 
@@ -120,18 +122,19 @@ class DartDoc extends BuildTool {
     this.includeCode = includeCode,
     this.mode = mode,
     this.generateAppCache = generateAppCache,
-    this.omitGenerationTime = omitGenerationTime,
     this.verbose = verbose,
     this.includeApi = includeApi,
     this.linkApi = linkApi,
     this.showPrivate = showPrivate,
     this.showInheritance = showInheritance,
+    this.includeLibs = includeLibs,
+    this.excludeLibs = excludeLibs,
     super(name, targetDef, phase, pipe);
 
 
   @override
   Future start(Project project) {
-    var inp = getChangedInputs();
+    var inp = new List<FileResource>.from(getChangedInputs());
 
     if (inp.isEmpty) {
       project.logger.info("nothing to do");
@@ -148,37 +151,31 @@ class DartDoc extends BuildTool {
     });
 
     // Chain the calls, rather than running in parallel.
-    Future ret = null;
-    for (Resource r in inp) {
-      if (r.exists && r is ResourceStreamable) {
-        var out = pipe.directPipe[r].single;
-
-        Future next(_) {
-          return dart2js(r, project.logger, messages,
-          cmd: cmd, outputFile: out,
-          minified: minified, checked: checked,
-          activeTarget: project.activeTarget)
-          .then((code) {
-            if (code != 0) {
-              hadErrors = true;
-            }
-          });
+    Future ret = dartDoc(project.logger, messages,
+        activeTarget: project.activeTarget,
+        cmd: cmd, dartFiles: inp, outDir: outDir,
+        packageRoot: packageRoot, includeCode: includeCode, mode: mode,
+        generateAppCache: generateAppCache,
+        omitGenerationTime: omitGenerationTime, verbose: verbose,
+        includeApi: includeApi, linkApi: linkApi, showPrivate: showPrivate,
+        showInheritance: showInheritance, includeLibs: includeLibs,
+        excludeLibs: excludeLibs)
+      .then((code) {
+        if (code != 0) {
+          hadErrors = true;
         }
-        if (ret == null) {
-          ret = next(project);
+      })
+      .catchError((e, s) {
+        project.logger.exception(e, s);
+        hadErrors = true;
+      })
+      .whenComplete(() {
+        messages.close();
+        if (hadErrors) {
+          handleFailure(project,
+          mode: onFailure,
+          failureMessage: "one or more files had errors");
         }
-        else {
-          ret = ret.then(next);
-        }
-      }
-    }
-    ret = ret.then((_) {
-      messages.close();
-      if (hadErrors) {
-        handleFailure(project,
-        mode: onFailure,
-        failureMessage: "one or more files had errors");
-      }
     });
     return ret;
   }

@@ -162,6 +162,9 @@ abstract class Resource<T extends ResourceListable> {
     }
     return relname == t.relname;
   }
+
+  @override
+  int get hashCode => absolute.hashCode;
   
   @override
   String toString() {
@@ -263,7 +266,8 @@ abstract class ResourceStreamable<T extends ResourceListable> extends Resource<T
  *
  * A kind of [Resource] that contains other resources.
  */
-abstract class ResourceListable<T extends Resource> extends Resource {
+abstract class ResourceListable<T extends Resource, R extends ResourceListable>
+    extends Resource<R> {
   List<T> list();
 
   /**
@@ -689,7 +693,7 @@ abstract class FileEntityResource<T extends FileSystemEntity>
 
 
 class DirectoryResource extends FileEntityResource<FileSystemEntity>
-    implements ResourceListable<FileEntityResource> {
+    implements ResourceListable<FileEntityResource, DirectoryResource> {
   final Directory referencedDirectory;
 
 

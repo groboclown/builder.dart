@@ -26,7 +26,7 @@
 /**
  * All the exported tool files
  */
-library builder.src.tools;
+library builder.src.tasks;
 
 export 'dart_path.dart';
 export 'task/dart.dart';

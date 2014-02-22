@@ -248,7 +248,7 @@ class LogResourceMessage extends LogToolMessage {
   Map<String, dynamic> createParams() {
     var params = super.createParams();
     params.addAll(<String, dynamic>{
-        "file": file.relname,
+        "file": file == null ? null : file.relname,
         "line": line,
         "charStart": charStart,
         "charEnd": charEnd

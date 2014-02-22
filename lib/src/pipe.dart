@@ -25,7 +25,7 @@
  * Defines how [Resource]s map from one source to a destination.
  */
 
-library builder.src.decl;
+library builder.src.pipe;
 
 import 'resource.dart';
 
