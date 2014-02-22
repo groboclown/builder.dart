@@ -28,3 +28,159 @@ library builder.src.tool.dartdoc;
 /**
  * Executes the `dartdoc` command in a separate process.
  */
+
+import 'dart:async';
+
+import '../../tool.dart';
+import '../task/dartdoc.dart';
+export '../task/dartdoc.dart' show
+  DocMode;
+
+class DartDoc extends BuildTool {
+  final String cmd;
+
+  final FailureMode onFailure;
+
+  final DirectoryResource outDir;
+  final DirectoryResource libraryRoot;
+  final DirectoryResource packageRoot;
+  final bool includeCode;
+  final DocMode mode;
+  final bool generateAppCache;
+  final bool omitGenerationTime;
+  final bool verbose;
+  final bool includeApi;
+  final bool linkApi;
+  final bool showPrivate;
+  final bool showInheritance;
+  final Iterable<String> includeLibs;
+  final Iterable<String> excludeLibs;
+
+
+
+  // FIXME this should only explicitly call one file.
+
+  factory DartDoc(String name,
+      { String description: "", String phase: PHASE_BUILD,
+      Iterable<String> depends, FailureMode onFailure,
+      String cmd: null, FileResource dartFile, Iterable<FileResource> dartFiles,
+      DirectoryResource outDir: null, DirectoryResource libraryRoot: null,
+      DirectoryResource packageRoot: null,
+      bool includeCode: true, DocMode mode: DocMode.STATIC, bool generateAppCache,
+      bool omitGenerationTime: true, bool verbose: false, bool includeApi: true,
+      bool linkApi: false, bool showPrivate: false, bool showInheritance: true,
+      Iterable<String> includeLibs: null, Iterable<String> excludeLibs: null
+      }) {
+
+    if (depends == null) {
+      depends = <String>[];
+    }
+
+    var files = <FileResource>[];
+    if (dartFile != null) {
+      files.add(dartFile);
+    }
+    if (dartFiles != null) {
+      files.addAll(dartFiles);
+    }
+
+    if (outDir == null) {
+      // force the outdir to be specified, to allow pipes to work right.
+      outDir = new DirectoryResource.named("docs/");
+    }
+
+
+    var pipe = new Pipe.all(
+      requiredInput: files,
+      optionalInput: libraryRoot == null ? null : <Resource>[ libraryRoot ],
+      output: <Resource>[ outDir ]
+      );
+
+    var targetDef = BuildTool.mkTargetDef(name, description, phase, pipe,
+      depends, <String>[]);
+    return new DartDoc._(name, targetDef, phase, pipe, minified, checked,
+    cmd, onFailure);
+  }
+
+
+  DartDoc._(String name, TargetDef targetDef, String phase, Pipe pipe,
+      FailureMode onFailure,
+      String cmd, DirectoryResource outDir, DirectoryResource libraryRoot,
+      DirectoryResource packageRoot,
+      bool includeCode, DocMode mode, bool generateAppCache,
+      bool omitGenerationTime, bool verbose, bool includeApi,
+      bool linkApi, bool showPrivate, bool showInheritance,
+      Iterable<String> includeLibs, Iterable<String> excludeLibs) :
+    this.cmd = cmd,
+    this.onFailure = onFailure,
+    this.outDir = outDir,
+    this.libraryRoot = libraryRoot,
+    this.packageRoot = packageRoot,
+    this.omitGenerationTime = omitGenerationTime,
+    this.includeCode = includeCode,
+    this.mode = mode,
+    this.generateAppCache = generateAppCache,
+    this.omitGenerationTime = omitGenerationTime,
+    this.verbose = verbose,
+    this.includeApi = includeApi,
+    this.linkApi = linkApi,
+    this.showPrivate = showPrivate,
+    this.showInheritance = showInheritance,
+    super(name, targetDef, phase, pipe);
+
+
+  @override
+  Future start(Project project) {
+    var inp = getChangedInputs();
+
+    if (inp.isEmpty) {
+      project.logger.info("nothing to do");
+      return null;
+    }
+
+    var hadErrors = false;
+
+    StreamController<LogMessage> messages = new StreamController<LogMessage>();
+    messages.stream.listen((LogMessage msg) {
+      if (msg.level.startsWith("err")) {
+        hadErrors = true;
+      }
+    });
+
+    // Chain the calls, rather than running in parallel.
+    Future ret = null;
+    for (Resource r in inp) {
+      if (r.exists && r is ResourceStreamable) {
+        var out = pipe.directPipe[r].single;
+
+        Future next(_) {
+          return dart2js(r, project.logger, messages,
+          cmd: cmd, outputFile: out,
+          minified: minified, checked: checked,
+          activeTarget: project.activeTarget)
+          .then((code) {
+            if (code != 0) {
+              hadErrors = true;
+            }
+          });
+        }
+        if (ret == null) {
+          ret = next(project);
+        }
+        else {
+          ret = ret.then(next);
+        }
+      }
+    }
+    ret = ret.then((_) {
+      messages.close();
+      if (hadErrors) {
+        handleFailure(project,
+        mode: onFailure,
+        failureMessage: "one or more files had errors");
+      }
+    });
+    return ret;
+  }
+}
+
