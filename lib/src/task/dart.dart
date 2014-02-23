@@ -25,7 +25,61 @@
 
 /**
  * Executes the `dart` command in a separate process.
+ *
+ * Future versions should allow for capturing the stdout and stderr.
  */
 library builder.src.task.dart;
 
+import 'dart:async';
+import 'dart:io';
+import 'dart:convert';
+
 import '../../task.dart';
+import '../dart_path.dart';
+import '../os.dart';
+
+
+Future dart(Resource dartFile, Logger logger,
+    StreamController<LogMessage> messages,
+    { TargetMethod activeTarget, String cmd: null,
+    bool checked: true, ResourceListable packageRoot}) {
+  assert(messages != null);
+  assert(dartFile != null);
+  if (cmd == null) {
+    cmd = DART_NAME;
+  }
+  Resource exec = resolveExecutable(cmd, DART_PATH);
+  if (exec == null) {
+    throw new BuildExecutionException(activeTarget,
+    "could not find " + cmd);
+  }
+
+  var args = <String>[];
+  if (checked) {
+    args.add("-c");
+  }
+  args.add(dartFile.relname);
+
+  logger.debug("Running [" + exec.relname + "] with arguments " +
+    args.toString());
+
+  return Process.start(exec.relname, args).then((process) {
+    process.stderr.transform(new Utf8Decoder(allowMalformed: true))
+      .transform(new LineSplitter()).listen((String line) {
+        // TODO process the output data.
+        logger.warn(line);
+      });
+    process.stdout.transform(new Utf8Decoder(allowMalformed: true))
+      .transform(new LineSplitter()).listen((String data) {
+        // TODO process the output data.
+        logger.info(data);
+      });
+    return process.exitCode;
+  }).then((code) {
+    logger.fileInfo(
+        file: dartFile,
+        message: "Completed processing " + dartFile.name);
+    return messages.close().then((_) => code);
+  });
+}
+

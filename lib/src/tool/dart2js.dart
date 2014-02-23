@@ -63,8 +63,6 @@ class Dart2JS extends BuildTool {
 
   final bool checked;
 
-  // FIXME this should only explicitly call one file.
-
   factory Dart2JS(String name,
       { String description: "", String phase: PHASE_BUILD,
       ResourceStreamable dartFile: null, List<String> depends: null,

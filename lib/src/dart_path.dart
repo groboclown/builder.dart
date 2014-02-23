@@ -40,4 +40,5 @@ final List<String> DART_PATH = <String>[
 final String DART_ANALYZER_NAME = "dartanalyzer";
 final String DART2JS_NAME = "dart2js";
 final String DART_DOC_NAME = "dartdoc";
+final String DART_NAME = "dart";
 
