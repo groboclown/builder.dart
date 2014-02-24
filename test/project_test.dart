@@ -23,13 +23,56 @@
 
 library project_test;
 
+import 'dart:async';
+
 import 'package:builder/unittest.dart';
 import 'package:unittest/vm_config.dart';
 
+import '../lib/src/argparser.dart';
+import '../lib/src/project.dart';
+import '../lib/src/targetmethod.dart';
+
 
 test_TopologicalSort() {
-  // FIXME
-  test('test 1', () {});
+  group("topo sort", () {
+    test("weak link", () {
+      var order = <String>[];
+      var targets = [ new MockTarget("1", [ "1a" ], [], order ),
+        new MockTarget("1a", [], [], order),
+        new MockTarget("2", [], [], order),
+        new MockTarget("x1", [], [ "x2", "1" ], order),
+        new MockTarget("x2", [], [ "2" ], order)
+      ];
+      var args = [ "1", "x2", "2" ];
+      runProject(targets, args);
+
+      expect(order,
+        equals([ "1a", "1", "2", "x2" ]));
+    });
+  });
+}
+
+
+Future<int> runProject(List<TargetMethod> targets, List<String> args) {
+  BuildArgs ba = new BuildArgs.fromCmd(args, targets);
+  Project p = new Project.parse(ba);
+  return p.buildTargets(ba.calledTargets);
+}
+
+
+class MockTarget extends TargetMethod {
+  final List<String> callOrder;
+
+  MockTarget(String name, List<String> strong, List<String> weak,
+      List<String> callOrder) :
+    this.callOrder = callOrder,
+    super(name, new TargetDef(name, strong, weak, false));
+
+  Future start(Project project) {
+    callOrder.add(name);
+    print("Call order ${callOrder}");
+    return null;
+  }
 }
 
 

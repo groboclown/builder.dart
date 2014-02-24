@@ -28,6 +28,7 @@ import 'package:unittest/vm_config.dart';
 import 'package:path/path.dart' as path;
 
 import '../lib/src/tool/relation.dart';
+import '../lib/src/translatepath.dart';
 
 test_GlobTranslator() {
   group("globTranslator", () {
