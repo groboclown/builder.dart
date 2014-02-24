@@ -77,13 +77,13 @@ const String TARGET_CLEAN = "clean";
 const String TARGET_BUILD = "build";
 const String TARGET_ASSEMBLE = "assemble";
 const String TARGET_DEPLOY = "deploy";
-
+const String TARGET_UTILITY = "utility";
 
 const String PHASE_CLEAN = "phase_clean";
 const String PHASE_BUILD = "phase_build";
 const String PHASE_ASSEMBLE = "phase_assemble";
 const String PHASE_DEPLOY = "phase_deploy";
-
+const String PHASE_UTILITY = "phase_utility";
 
 
 
@@ -103,6 +103,10 @@ final TargetMethod TARGET_PHASE_DEPLOY = decl.addPhase(
     PHASE_DEPLOY, TARGET_DEPLOY,
     <String>[],
     <String>[ PHASE_CLEAN, PHASE_BUILD, PHASE_ASSEMBLE ]);
+final TargetMethod TARGET_PHASE_UTILITY = decl.addPhase(
+    PHASE_UTILITY, TARGET_UTILITY,
+        <String>[],
+        <String>[]);
 final TargetMethod TARGET_FULL = new decl.VirtualTarget(
     "full", description: "the complete build",
     depends: <String>[ TARGET_CLEAN, TARGET_BUILD, TARGET_ASSEMBLE, TARGET_DEPLOY ],
