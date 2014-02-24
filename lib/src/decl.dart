@@ -310,7 +310,12 @@ void _addToPhase(String phaseName, BuildTool tool) {
   phaseGroup.targetDef.weakDepends.add(tool.name);
   var phaseTarget = _TOP_PHASES[_PHASE_NAME_TO_TOP[phaseName]];
   phaseTarget.targetDef.strongDepends.add(tool.name);
-  
+
+
+  // FIXME the targets inside a phase need to have the full phase ordering
+  // added here in order to enforce the strong ordering defined by phases.
+
+
   // DEBUG topo sort
   //print("topo-sort -- added " + tool.name + " as dependent to " + phaseTarget.name);
 }
