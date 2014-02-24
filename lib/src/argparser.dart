@@ -67,6 +67,20 @@ class BuildArgs {
         targets.add(tgt);
       }
     }
+    for (var r in res.rest) {
+      bool found = false;
+      for (var tgt in supportedTargets) {
+        if (tgt.name == r) {
+          found = true;
+          targets.add(tgt);
+        }
+      }
+      if (! found) {
+        print("Unknown build target '${r}'.  Use '--help' to find the build targets available.");
+        exit(1);
+      }
+    }
+
 
     var defaultTargets = supportedTargets.where(
         (t) => t.targetDef.isDefault);
