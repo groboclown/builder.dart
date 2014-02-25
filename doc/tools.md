@@ -66,6 +66,12 @@ Dart2JS
 -------
 
 
+DartDoc
+-------
+
+_Note: this tool is only supported in Dart versions 1.1, and is removed as of Dart 1.2._
+
+
 
 Data Types
 ==========
