@@ -36,18 +36,17 @@ import '../lib/src/targetmethod.dart';
 test_TopologicalSort() {
   group("topo sort", () {
     test("weak link", () {
-      var order = <String>[];
-      var targets = [ new MockTarget("1", [ "1a" ], [], order ),
-        new MockTarget("1a", [], [], order),
-        new MockTarget("2", [], [], order),
-        new MockTarget("x1", [], [ "x2", "1" ], order),
-        new MockTarget("x2", [], [ "2" ], order)
+      MockTarget.callOrder.clear();
+      var targets = [ new MockTarget("1", [ "1a" ], []),
+        new MockTarget("1a", [], []),
+        new MockTarget("2", [], []),
+        new MockTarget("x1", [], [ "x2", "1" ]),
+        new MockTarget("x2", [], [ "2" ])
       ];
       var args = [ "1", "x2", "2" ];
-      runProject(targets, args);
-
-      expect(order,
-        equals([ "1a", "1", "2", "x2" ]));
+      runProject(targets, args).then((_) =>
+        expect(MockTarget.callOrder,
+          equals([ "1a", "1", "2", "x2" ])));
     });
   });
 }
@@ -61,11 +60,9 @@ Future<int> runProject(List<TargetMethod> targets, List<String> args) {
 
 
 class MockTarget extends TargetMethod {
-  final List<String> callOrder;
+  static List<String> callOrder = <String>[];
 
-  MockTarget(String name, List<String> strong, List<String> weak,
-      List<String> callOrder) :
-    this.callOrder = callOrder,
+  MockTarget(String name, List<String> strong, List<String> weak) :
     super(name, new TargetDef(name, strong, weak, false));
 
   Future start(Project project) {
