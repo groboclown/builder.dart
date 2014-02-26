@@ -79,5 +79,6 @@ class UnitTestTransformer extends Transformer {
   Future apply(Transform transform) {
     // FIXME
     print("should run unit test on " + transform.primaryInput.toString());
+    return null;
   }
 }

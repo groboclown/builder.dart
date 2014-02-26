@@ -352,6 +352,8 @@ TargetMethod addPhase(String phaseName, String topTargetName,
   //   that way.
   _TOP_PHASES[topTargetName] = new TopPhaseTarget(topTargetName, phaseTarget,
       isDefault);
+  
+  return phaseTarget;
 }
 
 
