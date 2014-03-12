@@ -32,9 +32,6 @@ _TODO describe how to create and use file and directory resources._
 
 
 
-
-
-
 ResourceCollection
 ------------------
 
@@ -46,6 +43,24 @@ to look in to find executables.
 _TODO describe the ways to create a resource collection and how to use it._
 
 
+
+Project
+-------
+
+Contains the information for the current context of the build project execution.
+
+Most tasks will use the `logger` member to report logging messages.  It also
+provides for storing property values that can be passed to later build
+tasks.
+
+
+Logger
+------
+
+Logs messages to the defined output.
+
+
+
 std.dart
 --------
 
@@ -55,4 +70,40 @@ This must be explicitly imported, because not every build will follow this
 convention.
 
 _TODO define each value in the library._
+
+
+
+
+
+Tool Data Types
+===============
+
+These data types are specific to the tools.
+
+
+
+FailureMode
+-----------
+
+A function that handles a `Failure` generated during the execution of a target.
+
+    typedef void FailureMode(Failure failure);
+
+    class Failure {
+      final Project project;
+      final String failureMessage;
+      final Resource resource;
+      final int line;
+      final int charStart;
+      final int charEnd;
+    }
+
+The standard implementations of `FailureMode` are:
+
+ * **IGNORE_FAILURE** Logs an info-level message and keeps the build running.
+ * **WARN_ON_FAILURE** Logs a warning-level message and keeps the build running.
+ * **SET_PROPERTY_ON_FAILURE** Sets a `Project` property value and keeps the build running.
+ * **STOP_ON_FAILURE** Stops the build with an error.
+
+
 
