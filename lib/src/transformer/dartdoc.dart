@@ -42,8 +42,6 @@ import 'dart:async';
 
 import 'package:barback/barback.dart';
 
-import '../tool/unittest.dart';
-
 
 class DartDocTransformer extends Transformer {
   final BarbackSettings settings;
@@ -79,5 +77,6 @@ class DartDocTransformer extends Transformer {
   Future apply(Transform transform) {
     // FIXME
     print("should run dartdoc on " + transform.primaryInput.toString());
+    return null;
   }
 }

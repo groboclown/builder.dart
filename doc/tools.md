@@ -114,7 +114,16 @@ Runs the `dartanalyzer` tool.
 ## UnitTests
 - - -
 
+<<<<<<< HEAD
 Runs unit tests.
+=======
+DartDoc
+-------
+
+_Note: this tool is only supported in Dart versions 1.1, and is removed as of Dart 1.2._
+
+
+>>>>>>> 8222d38b41c5984c47a2c259edf928fdae8369f9
 
 **Default Phase:** `PHASE_BUILD`
 
