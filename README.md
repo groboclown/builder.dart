@@ -12,6 +12,9 @@ There is also planned support for
 to allow using some standard Dart build processes, like unit testing and
 document generation, as part of the `pub build` tool.
 
+**Future Status Note:** It looks like the Dart team is trying to move to using
+`pub` as the standard build tool, and is moving away from using `build.dart`.
+
 
 
 Status

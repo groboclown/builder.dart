@@ -30,7 +30,6 @@ All tools share the same general invocation usage.
 
 
 ## Delete
-- - -
 
 Deletes files and directories based on a [ResourceCollection](datatypes.md).
 
@@ -44,7 +43,6 @@ Deletes files and directories based on a [ResourceCollection](datatypes.md).
 
 
 ## MkDir
-- - -
 
 Creates an empty directory.  Directories are created when needed by other files,
 so this tool should only be used when an empty directory is explicitly needed.
@@ -59,7 +57,6 @@ so this tool should only be used when an empty directory is explicitly needed.
 
 
 ## Exec
-- - -
 
 Runs a native application.
 
@@ -72,7 +69,6 @@ Runs a native application.
 
 
 ## Copy
-- - -
 
 Copies files and other resources.  Unlike other tools, it has different
 constructors to specify the exact kind of copy requested.
@@ -87,7 +83,6 @@ constructors to specify the exact kind of copy requested.
 
 
 ## Relationship
-- - -
 
 Defines an indirect relationship between one set of files and another.  For
 example, in interpreted languages (such as Dart), the unit test execution only
@@ -97,7 +92,6 @@ they test.  This relationship can be described in a [Relationship] target.
 
 
 ## DartAnalyzer
-- - -
 
 Runs the `dartanalyzer` tool.
 
@@ -112,7 +106,6 @@ Runs the `dartanalyzer` tool.
 
 
 ## UnitTests
-- - -
 
 Runs unit tests.
 
@@ -127,7 +120,6 @@ Runs unit tests.
 
 
 ## Dart2JS
-- - -
 
 Runs the `dart2js` tool.
 
@@ -141,6 +133,5 @@ Runs the `dart2js` tool.
 
 
 ## DartDoc
-- - -
 
 _Note: this tool is only supported in Dart versions 1.1, and is removed as of Dart 1.2._

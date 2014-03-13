@@ -51,6 +51,7 @@ class UnitTestTransformer extends Transformer {
   UnitTestTransformer() : settings = null;
   UnitTestTransformer.asPlugin(this.settings);
 
+
   /**
    * Space-separated list of file extensions with leading `.` that are the
    * allowed for the primary inputs to this transformer.
