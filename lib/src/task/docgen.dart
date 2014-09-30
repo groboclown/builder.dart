@@ -22,7 +22,7 @@
  */
 
 
-library builder.src.task.dartdoc;
+library builder.src.task.docgen;
 
 
 import 'dart:async';
@@ -36,13 +36,19 @@ import '../os.dart';
 
 
 
-class DocMode {
-  static const LIVE_NAV = const DocMode._("live-nav");
-  static const STATIC = const DocMode._("static");
 
-  final String arg;
-  const DocMode._(this.arg);
-}
+/*
+ * OLD INVALID OPTIONS:
+ *  --no-code
+ *  --mode
+ *  --generate-app-cache (similar to --compile)
+ *  --omit-generation-time
+ *  --verbose
+ *  --include-api
+ *  --link-api
+ *  --show-private (now --include-private)
+ *  --inherit-from-object
+ */
 
 
 /**
@@ -52,15 +58,15 @@ class DocMode {
  * will be sent to "./docs/". The returned [Future]
  * executes when the process completes.
  */
-Future dartDoc(Logger logger, StreamController<LogMessage> messages,
+Future docGen(Logger logger, StreamController<LogMessage> messages,
     { String cmd: null, Iterable<FileResource> dartFiles,
-    DirectoryResource outDir: null, DirectoryResource libraryRoot: null,
-    DirectoryResource packageRoot: null,
-    bool includeCode: true, DocMode mode: DocMode.STATIC, bool generateAppCache,
-    bool omitGenerationTime: true, bool verbose: false, bool includeApi: true,
-    bool linkApi: false, bool showPrivate: false, bool showInheritance: true,
-    Iterable<String> includeLibs: null, Iterable<String> excludeLibs: null,
-    TargetMethod activeTarget: null }) {
+    DirectoryResource outDir: null, DirectoryResource packageRoot: null,
+    bool compile: true, bool serve: false, bool noDocs: false,
+    FileResource introduction: null, bool includeDependentPackages: true,
+    bool includeSdk: true, DirectoryResource sdkDir: null,
+    String startPage: null,
+    bool indentJson: false,  bool includePrivate: false,
+    Iterable<String> excludeLibs: null, TargetMethod activeTarget: null }) {
 
   if (dartFiles == null || dartFiles.isEmpty) {
     logger.info("nothing to do");
@@ -68,7 +74,7 @@ Future dartDoc(Logger logger, StreamController<LogMessage> messages,
   }
 
   if (cmd == null) {
-    cmd = DART_DOC_NAME;
+    cmd = DOCGEN_NAME;
   }
   Resource exec = resolveExecutable(cmd, DART_PATH);
   if (exec == null) {
@@ -78,43 +84,58 @@ Future dartDoc(Logger logger, StreamController<LogMessage> messages,
 
   var args = <String>[];
 
-  if (! includeCode) {
-    args.add('--no-code');
-  }
-  if (mode != null) {
-    args.add("--mode");
-    args.add(mode.arg);
-  }
-  if (generateAppCache) {
-    args.add('--generate-app-cache');
-  }
-  if (omitGenerationTime) {
-    args.add('--omit-generation-time');
-  }
-  if (verbose) {
-    args.add('--verbose');
-  }
-  if (includeApi) {
-    args.add('--include-api');
-  }
-  if (linkApi) {
-    args.add('--link-api');
-  }
-  if (showPrivate) {
-    args.add('--show-private');
-  }
-  if (showInheritance) {
-    args.add('--inherit-from-object');
-  }
-  // --enable-diagnostic-colors
+  // --parse-sdk
 
-  if (includeLibs != null) {
-    for (String lib in includeLibs) {
-      args
-        ..add('--include-lib')
-        ..add(lib);
-    }
+  if (includeSdk) {
+      args.add('--include-sdk');
+  } else {
+      args.add('--no-include-sdk');
   }
+
+  if (includeDependentPackages) {
+      args.add('--include-dependent-packages');
+  } else {
+      args.add('--no-include-dependent-packages');
+  }
+
+  if (indentJson) {
+      args.add('--indent-json');
+  } else {
+      args.add('--no-indent-json');
+  }
+
+  if (includePrivate) {
+    args.add('--include-private');
+  }
+  if (compile) {
+    args.add('--compile');
+  }
+  if (serve) {
+    args.add('--serve');
+  }
+  if (noDocs) {
+    args.add('--no-docs');
+  }
+
+  if (introduction != null) {
+      args
+        ..add('--introduction')
+        ..add(introduction.absolute);
+  }
+
+  if (startPage != null) {
+      args
+        ..add('--start-page')
+        ..add(startPage);
+  }
+
+  // FIXME use the DART_HOME to define this
+  if (sdkDir != null) {
+      args
+        ..add('--sdk')
+        ..add(sdkDir.absolute);
+  }
+
   if (excludeLibs != null) {
     for (String lib in excludeLibs) {
       args
@@ -136,11 +157,6 @@ Future dartDoc(Logger logger, StreamController<LogMessage> messages,
   args
     ..add('--package-root')
     ..add(packageRoot.relname);
-  if (libraryRoot != null) {
-    args
-      ..add('--library-root')
-      ..add(libraryRoot.relname);
-  }
 
   for (var f in dartFiles) {
     args.add(f.relname);

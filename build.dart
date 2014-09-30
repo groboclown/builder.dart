@@ -61,13 +61,12 @@ final unitTests = new UnitTests("test",
     summaryDir: TEST_SUMMARY_DIR);
 
 
-final dartDocs = new DartDoc("dartdoc",
+final docGen = new DocGen("docgen",
     description: "Generate API documentation",
     dartFiles: [ LIB_DIR.child("tool.dart"), LIB_DIR.child("make.dart"),
       LIB_DIR.child("builder.dart"), LIB_DIR.child("unittest.dart") ],
     excludeLibs: [ 'ansicolor' ],
-    outDir: GEN_DOC_DIR,
-    generateAppCache: true, linkApi: true);
+    outDir: GEN_DOC_DIR);
 
 
 // FOR TESTING

@@ -22,15 +22,14 @@
  */
 
 
-library builder.transformer.unittest;
-
-import '../resource.dart';
-import '../tool/unittest.dart';
-import '../project.dart';
-import '../argparser.dart';
+library builder.transformer.docgen;
 
 /**
- * Transformer for use with the `pub` command, to allow running unit tests
+ * **FIXME** from what I can tell, the builder does not allow for multiple
+ * transformers in a single library.  So, for the moment, this library is
+ * ommitted from the `lib/transformer.dart` file.
+ *
+ * Transformer for use with the `pub` command, to allow running doc generation
  * as part of the "build" process.
  *
  * Run this by setting up your pubspec.yaml file like:
@@ -50,11 +49,11 @@ import 'package:barback/barback.dart';
 import '../tool/unittest.dart';
 
 
-class UnitTestTransformer extends Transformer {
+class DocGenTransformer extends Transformer {
   final BarbackSettings settings;
 
-  UnitTestTransformer() : settings = null;
-  UnitTestTransformer.asPlugin(this.settings);
+  DocGenTransformer() : settings = null;
+  DocGenTransformer.asPlugin(this.settings);
 
 
   /**
@@ -66,29 +65,9 @@ class UnitTestTransformer extends Transformer {
 
 
   @override
-  Future<bool> isPrimary(AssetId input) {
-    return super.isPrimary(input).then((res) {
-      if (! res) {
-        return false;
-      }
-
-      if (input.path.startsWith("test/")) {
-        // files within the "test/" directory
-        return new Future.value(true);
-      }
-      return new Future.value(false);
-    });
-  }
-
-
-  @override
   Future apply(Transform transform) {
-    ResourceCollection testFiles = new SimpleResourceCollection.single(
-            new FileResource.named(transform.primaryInput.id.path));
-    var summaryDir = new DirectoryResource.named("build/test-summary");
-    var tests = new UnitTests("unit-tests", testFiles: testFiles,
-            summaryDir: summaryDir);
-    var proj = new Project.parse(new BuildArgs.fromCmd([], []));
-    return tests.start(proj);
+    // FIXME
+    print("should run unit test on " + transform.primaryInput.toString());
+    return null;
   }
 }

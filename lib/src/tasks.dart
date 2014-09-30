@@ -32,6 +32,6 @@ export 'dart_path.dart';
 export 'task/dart.dart';
 export 'task/dart2js.dart';
 export 'task/dartanalyzer.dart';
-export 'task/dartdoc.dart';
+export 'task/docgen.dart';
 export 'task/unittest.dart';
 

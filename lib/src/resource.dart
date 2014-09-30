@@ -165,7 +165,7 @@ abstract class Resource<T extends ResourceListable> {
 
   @override
   int get hashCode => absolute.hashCode;
-  
+
   @override
   String toString() {
     return relname;
@@ -435,8 +435,8 @@ class ListableResourceCollection extends AbstractResourceCollection {
 class DirectoryCollection extends ListableResourceCollection {
   ResourceTest recurseTest;
   bool addDirectories;
-  
-  
+
+
   factory DirectoryCollection.files(ResourceListable res,
       ResourceTest fileTest) {
     //ResourceTest resTest = (f) {
@@ -452,8 +452,8 @@ class DirectoryCollection extends ListableResourceCollection {
   factory DirectoryCollection.everything(ResourceListable root) {
     return new DirectoryCollection(root, null, null, true);
   }
-  
-  
+
+
   /**
    * `resourceTest` is for deciding whether a [Resource] should be added to
    * the output or not.  `recurseTest` is for deciding whether a
@@ -463,7 +463,7 @@ class DirectoryCollection extends ListableResourceCollection {
     ResourceTest recurseTest, bool addDirectories = false ]) :
     this.recurseTest = recurseTest, this.addDirectories = addDirectories,
     super(res, resourceTest);
-  
+
 
   Iterable<Resource> findResources() {
     Set<Resource> ret = new Set<Resource>();
@@ -472,7 +472,7 @@ class DirectoryCollection extends ListableResourceCollection {
     //print(res.name + ": " + ret.toString());
     return ret;
   }
-  
+
   void addMore(ResourceListable listable, Set<Resource> ret,
       Set<ResourceListable> visited) {
     visited.add(listable);
@@ -493,7 +493,7 @@ class DirectoryCollection extends ListableResourceCollection {
       ret.add(listable);
     }
   }
-  
+
 }
 
 
@@ -568,6 +568,12 @@ abstract class FileEntityResource<T extends FileSystemEntity>
         stat = null;
       }
     }
+
+
+    // FIXME because this uses a generic type (T), and these returned
+    // subclasses are of a specific type (not the generic T), this logic
+    // doesn't work.
+
     if (stat == null || stat.type == null ||
         stat.type == FileSystemEntityType.NOT_FOUND) {
       if (notFoundHint == 'dir') {

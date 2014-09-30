@@ -31,5 +31,6 @@ library builder.transformer;
  */
 
 export 'src/transformer/unittest.dart';
-export 'src/transformer/dartdoc.dart';
+
+//export 'src/transformer/docgen.dart';
 

@@ -3,3 +3,6 @@ packages
 .project
 pubspec.lock
 .work
+.settings
+.buildlog
+web

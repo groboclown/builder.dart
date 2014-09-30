@@ -67,7 +67,7 @@ Resource resolveExecutable(String name, [ List<String> additionalPath,
       }
     }
   }
-  
+
   for (var ext in EXEC_EXT) {
     var execFile = new FileResource.named(name + ext, context: context);
     if (execFile != null && execFile.exists && ! execFile.isDirectory) {
@@ -76,14 +76,14 @@ Resource resolveExecutable(String name, [ List<String> additionalPath,
     if (! name.contains('/') && ! name.contains('\\') &&
         ! name.contains(context.separator)) {
       for (var p in path) {
-        var execFile = p.child(name + ext, "file");
+        var execFile = p.child(name + ext);
         if (execFile.exists && ! execFile.isDirectory) {
           return execFile;
         }
       }
     }
   }
-  
+
   return null;
 }
 

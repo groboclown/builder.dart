@@ -33,7 +33,7 @@ export 'tool/copy.dart';
 export 'tool/dart.dart';
 export 'tool/dart2js.dart';
 export 'tool/dartanalyzer.dart';
-export 'tool/dartdoc.dart';
+export 'tool/docgen.dart';
 export 'tool/delete.dart';
 export 'tool/exec.dart';
 export 'tool/mkdir.dart';

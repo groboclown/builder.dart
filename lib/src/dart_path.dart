@@ -39,6 +39,6 @@ final List<String> DART_PATH = <String>[
     : path.join(Platform.environment['DART_HOME'], "bin" ))];
 final String DART_ANALYZER_NAME = "dartanalyzer";
 final String DART2JS_NAME = "dart2js";
-final String DART_DOC_NAME = "dartdoc";
+final String DOCGEN_NAME = "docgen";
 final String DART_NAME = "dart";
 
