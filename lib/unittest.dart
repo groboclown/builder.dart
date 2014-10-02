@@ -63,14 +63,17 @@ import 'src/logger.dart' as logger;
  *       });
  *     }
  */
-
-
 class BuilderConfiguration extends SimpleConfiguration {
   final SendPort _replyTo;
 
   BuilderConfiguration(this._replyTo) {
     //print("BuilderConfiguration()");
     throwOnTestFailures = false;
+  }
+
+
+  BuilderConfiguration.cmd() : this._replyTo = new PrintSendPort() {
+      throwOnTestFailures = false;
   }
 
   @override
@@ -186,6 +189,12 @@ class BuilderConfiguration extends SimpleConfiguration {
 }
 
 
+/**
+ * Used to set the configuration when the command is invoked either directly
+ * from the command-line, or through the `builder.dart` library's Isolate
+ * code.
+ */
+@Deprecated('use setConfiguration')
 void selectConfiguration(SendPort replyTo, [ void useAlternateConfig() ]) {
   if (replyTo != null) {
     unittestConfiguration = new BuilderConfiguration(replyTo);
@@ -194,6 +203,21 @@ void selectConfiguration(SendPort replyTo, [ void useAlternateConfig() ]) {
   }
 }
 
+
+List<String> setConfiguration(List<String> args, SendPort replyTo,
+        [ void useAlternateConfig() ]) {
+  var ret = new List<String>.from(args);
+  if (replyTo != null) {
+    unittestConfiguration = new BuilderConfiguration(replyTo);
+  } else
+  if (args.contains("--json")) {
+      unittestConfiguration = new BuilderConfiguration.cmd();
+      ret.remove("--json");
+  } else if (useAlternateConfig != null) {
+      useAlternateConfig();
+  }
+  return ret;
+}
 
 
 /**
@@ -246,4 +270,19 @@ class LogUnitTestMessage extends logger.LogToolMessage {
     return params;
   }
 
+}
+
+
+
+/**
+ * A [SendPort] that uses [print].
+ */
+class PrintSendPort implements SendPort {
+
+  @override
+  void send(var message) {
+    if (message != null) {
+      print("#@%" + message.toString() + "%@#");
+    }
+  }
 }

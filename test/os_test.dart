@@ -88,7 +88,7 @@ all_tests() {
 
 
 main(List<String> args, [ replyTo ]) {
-  selectConfiguration(replyTo, useVMConfiguration);
+  args = setConfiguration(args, replyTo, useVMConfiguration);
   all_tests();
   if (!args.isEmpty) {
     filterTests(args[0]);

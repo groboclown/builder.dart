@@ -60,7 +60,6 @@ import '../../tool.dart';
  *
  *
  */
-
 class UnitTests extends BuildTool {
   final FailureMode onFailure;
 
@@ -131,7 +130,9 @@ class UnitTests extends BuildTool {
       runner = runner.then((_) => new Future(() {
         project.logger.info("Running test file " + r.name);
         return runSingleTest(project, r, errorCounts, resultWriter,
-          testArgs, summaryDir, runDir: runDir);
+          testArgs, summaryDir, runDir: runDir,
+          activeTarget: project.activeTarget,
+          logger: project.logger);
       }));
     }
 

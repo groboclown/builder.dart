@@ -9,10 +9,10 @@ import 'package:builder/std.dart';
 final DirectoryResource OUTPUT_DIR = new FileEntityResource(".work/");
 final DirectoryResource TEST_SUMMARY_DIR = OUTPUT_DIR.child("test-results/");
 
-//final unitTests = new UnitTests("test",
-//    description: "Run unit tests and generate summary report",
-//    testFiles: TEST_FILES,
-//    summaryDir: TEST_SUMMARY_DIR);
+final unitTests = new UnitTests("test",
+    description: "Run unit tests and generate summary report",
+    testFiles: TEST_FILES,
+    summaryDir: TEST_SUMMARY_DIR);
 
 final dartAnalyzer = new DartAnalyzer("lint",
     description: "Check the Dart files for language issues",
