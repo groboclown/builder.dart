@@ -19,13 +19,13 @@ Common Usage
 
 All tools share the same general invocation usage.
 
- * **(implied first argument)** (`String`) the name of the tool, as invoked
+* **(implied first argument)** (`String`) the name of the tool, as invoked
     from the command line.
- * **description** (`String`) description about the purpose of the tool.
+* **description** (`String`) description about the purpose of the tool.
     Displayed as a help message with the name of the tool.
- * **phase** (`String`) override the default phase of the tool.  This describes
+* **phase** (`String`) override the default phase of the tool.  This describes
     the grouping of when the tool is run in relation to other tools.
- * **depends** (`List<String>`) list of tools that this tool directly depends
+* **depends** (`List<String>`) list of tools that this tool directly depends
     upon.
 
 
@@ -37,9 +37,9 @@ Deletes files and directories based on a [ResourceCollection](datatypes.md).
 
 #### Supported Arguments:
 
- * **files** (`ResourceCollection` *required*) collection of the files and
+* **files** (`ResourceCollection` *required*) collection of the files and
         directories to remove.
- * **onFailure** (`FailureMode`) how to handle failures to delete.
+* **onFailure** (`FailureMode`) how to handle failures to delete.
 
 
 ## MkDir
@@ -51,8 +51,8 @@ so this tool should only be used when an empty directory is explicitly needed.
 
 #### Supported Arguments:
 
- * **dir** (`Resource` *required*) directory to create
- * **onFailure** (`FailureMode`) how to handle problem creating
+* **dir** (`Resource` *required*) directory to create
+* **onFailure** (`FailureMode`) how to handle problem creating
         directory.
 
 
@@ -64,7 +64,7 @@ Runs a native application.
 
 #### Supported Arguments:
 
- * **onFailure** (`FailureMode`) how to handle problems
+* **onFailure** (`FailureMode`) how to handle problems
 
 
 
@@ -77,7 +77,7 @@ constructors to specify the exact kind of copy requested.
 
 #### Supported Arguments:
 
- * **onFailure** (`FailureMode`) how to handle problem creating
+* **onFailure** (`FailureMode`) how to handle problem creating
         directory.
 
 
@@ -99,10 +99,10 @@ Runs the `dartanalyzer` tool.
 
 #### Supported Arguments:
 
- * **dir** (`Resource` *required*) directory to create
- * **onFailure** (`FailureMode`) how to handle problem creating
+* **onFailure** (`FailureMode`) how to handle problem creating
         directory.
-
+* **dartFiles** (`Resource` *required*) the files to analyze.
+ 
 
 
 ## UnitTests
@@ -113,10 +113,13 @@ Runs unit tests.
 
 #### Supported Arguments:
 
- * **dir** (`Resource` *required*) directory to create
- * **onFailure** (`FailureMode`) how to handle problem creating
+* **testFiles** (`ResourceCollection` *required*) tests to run
+* **testArgs** (`List<String>`) additional arguments to pass to the tests'
+    `main()` method.
+* **runInTestDir** (`bool`) should the tests run with the current directory
+    set to the directory in which the test file sits.  Defaults to `false`.
+* **onFailure** (`FailureMode`) how to handle problem creating
         directory.
-
 
 
 ## Dart2JS
@@ -127,11 +130,18 @@ Runs the `dart2js` tool.
 
 #### Supported Arguments:
 
- * **dir** (`Resource` *required*) directory to create
- * **onFailure** (`FailureMode`) how to handle problem creating
+* **dir** (`Resource` *required*) directory to create
+* **onFailure** (`FailureMode`) how to handle problem creating
         directory.
 
 
-## DartDoc
+## DocGen
 
-_Note: this tool is only supported in Dart versions 1.1, and is removed as of Dart 1.2._
+Runs the `docgen` tool.
+
+**Default Phase:** `PHASE_ASSEMBLE`
+
+#### Supported Arguments:
+
+* **dartFile** (`Resource`) the base dart file to run
+

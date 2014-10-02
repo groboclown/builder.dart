@@ -33,12 +33,6 @@ The following features are planned:
 * Work on publicity and integration with tools like [drone.io](http://docs.drone.io/dart.html)
 
 
-Current issues:
-
-* Currently, Dart doesn't have strong support for Isolates when running from
-  the command-line.  Because of this, Unit Tests may hang if they are very
-  short lived, or if the VM dies before launching.
-
 
 Adding The Builder To Your Project
 ==================================
@@ -231,6 +225,7 @@ These are common to both styles:
 
 * *DartAnalyzer* - runs the dartanalyzer tool over a set of Dart files.
 * *UnitTests* - runs the Dart unit tests in a file.
+* *Dart2JS* - runs the Dart2js tool over a set of Dart files.
 
 These are specific to declarative styles:
 
@@ -240,6 +235,9 @@ These are specific to declarative styles:
 * *MkDir* - creates empty directories.  Usually, this isn't needed, because the
  builder tools will create directories as necessary.  However, under some
  circumstances, you may need an empty directory created.
+* *Copy* - copies files.
+* *Exec* - execute a native OS process.
+* *Dart* - run a Dart file through the command line.
 
 You can make your own tool if you need additional functionality.
 

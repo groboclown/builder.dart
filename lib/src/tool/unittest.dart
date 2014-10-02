@@ -78,7 +78,7 @@ class UnitTests extends BuildTool {
       ResourceCollection testFiles: null, ResourceListable summaryDir: null,
       List<String> depends: null, List<String> testArgs: null,
       FailureMode onFailure: null, TestResultWriter resultWriter,
-      bool runInTestDir: true }) {
+      bool runInTestDir: false }) {
     if (depends == null) {
       depends = <String>[];
     }
