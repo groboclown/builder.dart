@@ -26,13 +26,12 @@ are planned.
 
 The following features are planned:
 
-* Add more helper libraries to make creation of builds easier: dart, dart2js, pub, zip, unzip.
+* Add more helper libraries to make creation of builds easier: dart,
+  zip, and unzip.  Pub won't be added as a library.
 * Add support for testing frameworks like DumpRenderTree (used by Dart team's [web-ui](https://github.com/dart-lang/web-ui) project)
 * Update the documentation as work progresses.
 * Work on publicity and integration with tools like [drone.io](http://docs.drone.io/dart.html)
 
-**Because this is such an early state of the build tool, expect the API to
-change in the near-term future.**
 
 Current issues:
 
