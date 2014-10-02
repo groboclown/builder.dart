@@ -5,11 +5,21 @@
 
 **::Overview::**
 
-(nothing yet)
+Fixes bugs around how unit tests are run, so that they no longer hang the
+build.
 
 **::Details::**
 
-(nothing yet)
+* Minor doc updates
+* Bug fixes:
+    * (Bug #30)(https://github.com/groboclown/builder.dart/issues/30) -
+      **build with UnitTests does not terminate**.
+      Fixed by moving the unit test execution into their own process.
+      This was necessary due to the current Dart implementation of Isolates
+      not being very robust.
+    * (Bug #31)(https://github.com/groboclown/builder.dart/issues/31) -
+      **UnitTests do not run in their own directory**.
+      Fixed with the move to running unit tests in a separate Process.
 
 
 ## 0.2.1
