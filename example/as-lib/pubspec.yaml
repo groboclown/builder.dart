@@ -1,0 +1,7 @@
+name: builder_example_as_lib
+description: Example for using dart with a lib
+dependencies:
+  builder:
+    hosted:
+      name: builder
+      path: ../..

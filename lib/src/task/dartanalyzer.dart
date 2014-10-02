@@ -64,9 +64,10 @@ Future dartAnalyzer(
   logger.debug("Running [" + exec.relname + "] with arguments " +
   args.toString());
 
-  return Process.start(exec.relname, args).then((process) {
-    // add stdout and stderr into a single stream
-    process.stderr.transform(_createCsvTransformer(uniqueLines))
+  return Process.start(exec.relname, args).then((Process process) {
+    // stderr: real output data to process
+    process.stderr.transform(new Utf8Decoder()).transform(
+            _createCsvTransformer(uniqueLines))
       .listen((List<String> row) {
         if (row.length >= 8) {
           var msg = new LogMessage.resource(
@@ -84,10 +85,12 @@ Future dartAnalyzer(
           logger.message(msg);
         }
       });
-    process.stdout.transform(new LineSplitter()).listen((String data) {
-        logger.fileInfo(tool: "dartanalyzer",
-        file: dartFile, message: data);
-      });
+    // stdout: logging information
+    process.stdout.transform(new Utf8Decoder()).transform(new LineSplitter())
+        .listen((String data) {
+          logger.fileInfo(tool: "dartanalyzer",
+          file: dartFile, message: data);
+        });
     return process.exitCode;
   }).then((code) {
     logger.fileInfo(
@@ -109,7 +112,7 @@ StreamTransformer<String, List<String>> _createCsvTransformer(
   var state = 0;
   var currentRow = <String>[];
 
-  void sinkUniqueRow(sink, row) {
+  void sinkUniqueRow(EventSink<List<String>> sink, List<String> row) {
     if (uniqueLines != null) {
       var r = new StringBuffer();
       r.writeAll(row, "|");
@@ -123,11 +126,11 @@ StreamTransformer<String, List<String>> _createCsvTransformer(
   }
 
   return new StreamTransformer<String, List<String>>.fromHandlers(
-      handleData: (value, sink) {
+      handleData: (String value, EventSink<List<String>> sink) {
         //print("**" + value.toString());
         if (value != null) {
           for (var p = 0; p < value.length; ++p) {
-            var c = new String.fromCharCode(value[p]);
+            var c = value[p];
             switch (state) {
               case 0: // normal inside cell
                 if (c == '\\') {
@@ -175,7 +178,7 @@ StreamTransformer<String, List<String>> _createCsvTransformer(
           }
         }
       },
-      handleDone: (sink) {
+      handleDone: (EventSink<List<String>> sink) {
         if (leftover.isNotEmpty) {
           currentRow.add(leftover.toString());
         }

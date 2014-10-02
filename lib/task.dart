@@ -21,7 +21,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-library builder.std;
+library builder.task;
 
 /**
  * The functions and classes used by libraries that define tasks.
