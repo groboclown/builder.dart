@@ -34,6 +34,11 @@ The following features are planned:
 **Because this is such an early state of the build tool, expect the API to
 change in the near-term future.**
 
+Current issues:
+
+* Currently, Dart doesn't have strong support for Isolates when running from
+  the command-line.  Because of this, Unit Tests may hang if they are very
+  short lived, or if the VM dies before launching.
 
 
 Adding The Builder To Your Project

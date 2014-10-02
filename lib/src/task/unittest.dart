@@ -34,6 +34,8 @@ import 'dart:isolate';
 import '../../task.dart';
 
 
+const DEFAULT_TIMEOUT = 15;
+
 
 /**
  * Build tool for running unit tests, with the `unittest` dart package.
@@ -64,7 +66,7 @@ import '../../task.dart';
 Future runSingleTest(Project proj, ResourceStreamable test,
     List<int> errorCounts, TestResultWriter resultWriter, List<String> testArgs,
     ResourceListable summaryDir,
-    { ResourceListable runDir: null }) {
+    { ResourceListable runDir: null, Duration timeout: null }) {
 
   StreamController<LogMessage> streamc =
             new StreamController<LogMessage>.broadcast(sync: true);
@@ -72,12 +74,16 @@ Future runSingleTest(Project proj, ResourceStreamable test,
   ReceivePort remoteOnExit = new ReceivePort();
   ReceivePort remoteOnError = new ReceivePort();
 
+  if (timeout == null) {
+      timeout = new Duration(seconds: DEFAULT_TIMEOUT);
+  }
+
   // Note: Windows Dart URI conversion requires forward slashes for
   // path separators.
   String relpath = test.relname.replaceAll("\\", "/");
 
   Future<Isolate> remote = Isolate.spawnUri(Uri.parse(relpath),
-      testArgs, remoteMessages.sendPort)
+      testArgs, remoteMessages.sendPort, paused: true)
     .then((Isolate iso) {
       // These may not be supported
       try {
@@ -90,6 +96,7 @@ Future runSingleTest(Project proj, ResourceStreamable test,
       } catch (_) {
           proj.logger.info("Dart implementation does not support Isolate.addErrorListener");
       }
+      iso.resume(null);
     })
     .catchError((e, s) {
       proj.logger.error(e.toString() + "\n" + s.toString());
@@ -98,6 +105,16 @@ Future runSingleTest(Project proj, ResourceStreamable test,
       }
       remoteMessages.close();
     });
+
+  new Timer(timeout, () {
+      remote.then((Isolate iso) {
+          try {
+            iso.kill(1);
+          } catch (_) {
+              proj.logger.error("Problem terminating unit test");
+          }
+      });
+  });
 
   remoteOnExit.listen((_) {
     if (! streamc.isClosed) {

@@ -26,10 +26,10 @@ Bug fixes.
       **'part of library_name' causes NoSuchMethodError**.  The stdout and
       stderr type have changed with the newer Dart releases, which makes the
       LineSplitter transformer no longer work.
-    * (Bug #31)(https://github.com/groboclown/builder.dart/issues/31)
-      **UnitTests are not executed in their directory**.
-      
-
+    * (Bug #30)(https://github.com/groboclown/builder.dart/issues/30) -
+      **build with UnitTests does not terminate**.
+      Partial fix.  The Isolate-based invocation is improved, but still doesn't
+      fix this issue in all cases.
 
 
 
