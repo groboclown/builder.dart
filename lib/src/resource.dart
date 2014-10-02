@@ -506,6 +506,12 @@ class DirectoryCollection extends ListableResourceCollection {
 
 
 
+
+
+
+abstract class FileEntityResource extends Resource<DirectoryResource> {
+
+
   /**
    *
    * [notFoundHint] is used if the file entry does not currently exist.
@@ -513,7 +519,7 @@ class DirectoryCollection extends ListableResourceCollection {
    * checks if the [relname] ends with a separator character (`/` or `\`)
    * to determine if it should be considered a directory or file.
    */
-FileEntityResource createFileEntityResource(String relname,
+  factory FileEntityResource(String relname,
       { path.Context context: null, String notFoundHint: null }) {
     if (relname == null) {
       throw new BuildSetupException("null relname");
@@ -602,20 +608,9 @@ FileEntityResource createFileEntityResource(String relname,
       throw new BuildSetupException("unknown stat type '" +
         stat.type.toString() + "' for '" + relname + "'");
     }
-}
+  }
 
 
-
-
-
-abstract class FileEntityResource<T extends FileSystemEntity>
-    extends Resource<DirectoryResource> {
-
-  final T entity;
-  final String _relname;
-  final path.Context _context;
-
-  FileEntityResource.inner(this.entity, this._context, this._relname);
 
   factory FileEntityResource.fromEntity(FileSystemEntity res,
       { path.Context context: null }) {
@@ -625,9 +620,34 @@ abstract class FileEntityResource<T extends FileSystemEntity>
     var relname = context.relative(res.path);
     var notFoundHint = (res is Directory ? 'dir' :
       res is Link ? null : 'file' );
-    return createFileEntityResource(relname, context: context,
+    return new FileEntityResource(relname, context: context,
       notFoundHint: notFoundHint);
   }
+
+
+  FileEntityResource.inner();
+
+
+
+  bool get isLink;
+
+
+  bool get isDirectory;
+
+
+}
+
+
+
+abstract class AbstractFileEntityResource<T extends FileSystemEntity>
+    extends FileEntityResource {
+
+  final T entity;
+  final String _relname;
+  final path.Context _context;
+
+  AbstractFileEntityResource.inner(this.entity, this._context, this._relname) :
+      super.inner();
 
 
   @override
@@ -676,11 +696,13 @@ abstract class FileEntityResource<T extends FileSystemEntity>
     return ((mode & 146) != 0); // 222 oct
   }
 
-
+  @override
   bool get isLink => entity is Link;
 
 
+  @override
   bool get isDirectory => false;
+
 
   @override
   DirectoryResource get parent =>
@@ -700,14 +722,14 @@ abstract class FileEntityResource<T extends FileSystemEntity>
 
 
 
-class DirectoryResource extends FileEntityResource<FileSystemEntity>
+class DirectoryResource extends AbstractFileEntityResource<FileSystemEntity>
     implements ResourceListable<FileEntityResource, DirectoryResource> {
   final Directory referencedDirectory;
 
 
   factory DirectoryResource.named(String relname,
       { path.Context context: null }) {
-    return createFileEntityResource(relname, context: context,
+    return new FileEntityResource(relname, context: context,
       notFoundHint: 'dir') as DirectoryResource;
   }
 
@@ -735,7 +757,7 @@ class DirectoryResource extends FileEntityResource<FileSystemEntity>
 
   @override
   FileEntityResource child(String name, [ String notFoundHint ]) {
-    return createFileEntityResource(relname + context.separator + name,
+    return new FileEntityResource(relname + context.separator + name,
       context: this.context, notFoundHint: notFoundHint);
   }
 
@@ -781,14 +803,14 @@ class DirectoryResource extends FileEntityResource<FileSystemEntity>
 /**
  * A file system file.
  */
-class FileResource extends FileEntityResource<FileSystemEntity>
+class FileResource extends AbstractFileEntityResource<FileSystemEntity>
     implements ResourceStreamable<DirectoryResource> {
   final File referencedFile;
 
 
   factory FileResource.named(String relname,
       { path.Context context: null }) {
-    return createFileEntityResource(relname, context: context,
+    return new FileEntityResource(relname, context: context,
       notFoundHint: 'file') as FileResource;
   }
 
@@ -864,7 +886,7 @@ ResourceCollection filenamesAsCollection(List<String> filenames,
     { bool include(FileEntityResource resource): null }) {
   var resources = <Resource>[];
   for (var name in filenames) {
-    var res = createFileEntityResource(name);
+    var res = new FileEntityResource(name);
     if (include == null || include(res)) {
       resources.add(res);
     }

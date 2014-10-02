@@ -5,10 +5,9 @@
 **::Overview::**
 
 Fixed the issue with the `FileEntityResource` factory returning a typed version
-when the class itself is generic - this should now be called with the
-`createFileEntityResource` method instead.  Note that users shouldn't be
-directly calling this, but instead should use the type-safe versions
-(`DirectoryResource.named` and `FileResource.named`).
+when the class itself is generic.  This was done by making that class be
+nothing but a parent super-class for the new `AbstractFileEntityResource` that
+does the real work, and which has the correct templating.
 
 Bug fixes.
 

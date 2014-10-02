@@ -5,3 +5,4 @@ dependencies:
     hosted:
       name: builder
       path: ../..
+  unittest: '>=0.10.0'
