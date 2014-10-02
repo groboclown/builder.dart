@@ -65,39 +65,63 @@ Future runSingleTest(Project proj, ResourceStreamable test,
     List<int> errorCounts, TestResultWriter resultWriter, List<String> testArgs,
     ResourceListable summaryDir,
     { ResourceListable runDir: null }) {
-  var response = new ReceivePort();
-  var streamc = new StreamController<LogMessage>.broadcast(sync: true);
 
-  // This is tricky.  The isolate's main thread quits before the tests run,
-  // because of the way that the unittest code is written (it spawns off the
-  // tests after the main method finishes), while the isolate's Future returns
-  // when the main thread completes.  To work around this, we need a way to
-  // signal when the unittest is *really* complete.  Unfortunately, because
-  // of the way that unittests may be async, this is far from trivial.
+  StreamController<LogMessage> streamc =
+            new StreamController<LogMessage>.broadcast(sync: true);
+  ReceivePort remoteMessages = new ReceivePort();
+  ReceivePort remoteOnExit = new ReceivePort();
+  ReceivePort remoteOnError = new ReceivePort();
 
-  // FIXME this currently hangs if the invoked isolate crashes before tests
-  // run, such as due to compilation problems.  It also hangs if there are no
-  // tests to run.
+  // Note: Windows Dart URI conversion requires forward slashes for
+  // path separators.
+  String relpath = test.relname.replaceAll("\\", "/");
 
-  // Looks like the Isolate should support microtasks, but there's an open
-  // bug on it:
-  // http://code.google.com/p/dart/issues/detail?id=14906
-  // If that bug gets fixed, and this problem is still seen, then open a
-  // new issue.  Changing the code if fixed would mean removing the special
-  // message passing for notices on
-
-  // Also of note, these bugs:
-  // http://code.google.com/p/dart/issues/detail?id=15348
-  // http://code.google.com/p/dart/issues/detail?id=15617
-
-
-  var remote = Isolate.spawnUri(Uri.parse(test.relname),
-      testArgs, response.sendPort)
-    .then((_) => new Future(() => 1))
+  Future<Isolate> remote = Isolate.spawnUri(Uri.parse(relpath),
+      testArgs, remoteMessages.sendPort)
+    .then((Isolate iso) {
+      // These may not be supported
+      try {
+        iso.addOnExitListener(remoteOnExit.sendPort);
+      } catch (_) {
+        proj.logger.info("Dart implementation does not support Isolate.addOnExitListener");
+      }
+      try {
+        iso.addErrorListener(remoteOnError.sendPort);
+      } catch (_) {
+          proj.logger.info("Dart implementation does not support Isolate.addErrorListener");
+      }
+    })
     .catchError((e, s) {
-      proj.logger.error(e + "\n" + s.toString());
+      proj.logger.error(e.toString() + "\n" + s.toString());
+      if (! streamc.isClosed) {
+          streamc.close();
+      }
+      remoteMessages.close();
     });
-  response.listen(
+
+  remoteOnExit.listen((_) {
+    if (! streamc.isClosed) {
+        streamc.close();
+    }
+    remoteMessages.close();
+  });
+
+  remoteOnError.listen((List msg) {
+    String err = "<unknown>";
+    String stack = "";
+    if (msg!= null && msg.length >= 2) {
+        if (msg[0] != null) {
+            err = msg[0].toString();
+        }
+        if (msg[1] != null) {
+            stack = msg[1].toString();
+        }
+    }
+    proj.logger.error(err + "\\n" + stack);
+  });
+
+
+  remoteMessages.listen(
           (String msgStr) {
         var val = JSON.decode(msgStr);
         var msg = new LogMessage.fromJson(val);
@@ -105,7 +129,7 @@ Future runSingleTest(Project proj, ResourceStreamable test,
         if (msg.createParams()['category'] == '<test-runner>' &&
             msg.message == "tests completed") {
           // special message that indicates the tests have completed
-          response.close();
+          remoteMessages.close();
           return;
         }
 
@@ -118,14 +142,13 @@ Future runSingleTest(Project proj, ResourceStreamable test,
         }
         streamc.add(msg);
       }, onDone: () {
-        streamc.close();
+        if (! streamc.isClosed) {
+          streamc.close();
+        }
       }
   );
   var fut = resultWriter(proj, summaryDir, test, streamc.stream);
-  if (fut != null) {
-    remote = Future.wait([remote, fut]);
-  }
-  return remote;
+  return fut;
 }
 
 

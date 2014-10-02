@@ -56,10 +56,10 @@ final cleanOutput = new Delete("clean-output",
 
 
 // Commented out until the new unit test isolate stuff is fixed.
-//final unitTests = new UnitTests("test",
-//    description: "Run unit tests and generate summary report",
-//    testFiles: TEST_FILES,
-//    summaryDir: TEST_SUMMARY_DIR);
+final unitTests = new UnitTests("test",
+    description: "Run unit tests and generate summary report",
+    testFiles: TEST_FILES,
+    summaryDir: TEST_SUMMARY_DIR);
 
 
 final docGen = new DocGen("docgen",
@@ -70,12 +70,13 @@ final docGen = new DocGen("docgen",
     outDir: GEN_DOC_DIR);
 
 
-// FOR TESTING
-final dart2js = new Dart2JS("dart2js",
-    description: "Convert the dart argparser to js",
-    phase: PHASE_DEPLOY,
-    dartFile: new FileResource.named("lib/src/argparser.dart"),
-    outDir: OUTPUT_DIR);
+// FOR TESTING - the builder project uses the "dart:io" package, which makes
+// it incompatible for Dart2JS.
+//final dart2js = new Dart2JS("dart2js",
+//    description: "Convert the dart argparser to js",
+//    phase: PHASE_DEPLOY,
+//    dartFile: new FileResource.named("lib/src/argparser.dart"),
+//    outDir: OUTPUT_DIR);
 
 // FOR TESTING
 final copy = new Copy.dir("export-docs",
