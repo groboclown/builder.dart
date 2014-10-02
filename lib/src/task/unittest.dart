@@ -63,7 +63,8 @@ import '../../task.dart';
  */
 Future runSingleTest(Project proj, ResourceStreamable test,
     List<int> errorCounts, TestResultWriter resultWriter, List<String> testArgs,
-    ResourceListable summaryDir) {
+    ResourceListable summaryDir,
+    { ResourceListable runDir: null }) {
   var response = new ReceivePort();
   var streamc = new StreamController<LogMessage>.broadcast(sync: true);
 

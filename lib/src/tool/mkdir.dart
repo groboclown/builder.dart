@@ -84,7 +84,7 @@ class MkDir extends BuildTool {
       }
     }
 
-    ret.then((_) {
+    return ret.then((_) {
       if (problems.isNotEmpty) {
         handleFailure(project,
           mode: onFailure,

@@ -301,7 +301,7 @@ abstract class ResourceCollection {
 }
 
 
-class SimpleResourceCollection extends ResourceCollection {
+class SimpleResourceCollection implements ResourceCollection {
   final List<Resource> _entries;
 
   SimpleResourceCollection(List<Resource> entries) :
@@ -316,7 +316,7 @@ class SimpleResourceCollection extends ResourceCollection {
 
 
 
-abstract class AbstractResourceCollection extends ResourceCollection {
+abstract class AbstractResourceCollection implements ResourceCollection {
   List<Resource> _entries;
 
   @override
@@ -343,12 +343,23 @@ typedef bool ResourceTest(Resource r);
 
 final List<RegExp> DEFAULT_IGNORE_NAMES = <RegExp>[
     new RegExp(r"^CVS[/\\]?$"),
-    new RegExp(r"^\..*$")
+    new RegExp(r"^\..*$"),
+    new RegExp(r"^[/\\]?packages[/\\]?$")
 ];
 final List<RegExp> DEFAULT_SOURCE_IGNORE_NAMES = <RegExp>[
-    new RegExp(r"^packages[/\\]?$")
+    new RegExp(r"^packages[/\\]?$"),
+    new RegExp(r"[/\\]packages[/\\]?$")
 ];
 
+
+ResourceTest anyResourceTest(List<ResourceTest> tests) {
+    return (Resource r) => tests.any((ResourceTest rt) => rt(r));
+}
+
+ResourceTest allResourceTests(List<ResourceTest> tests) {
+    return (Resource r) => tests.fold(true,
+            (bool val, ResourceTest rt) => val && rt(r));
+}
 
 
 
@@ -368,9 +379,7 @@ final ResourceTest SOURCE_RECURSION_TEST = (f) =>
 
 
 
-
-
-class ResourceSet extends ResourceCollection {
+class ResourceSet implements ResourceCollection {
   final List<ResourceCollection> _children = <ResourceCollection>[];
   ResourceTest filter;
 
@@ -405,6 +414,24 @@ class ResourceSet extends ResourceCollection {
     }
     return ret;
   }
+
+}
+
+
+class FilteredResourceCollection implements ResourceCollection {
+    final ResourceCollection proxy;
+    final List<ResourceTest> filters;
+
+    FilteredResourceCollection(this.proxy, this.filters);
+
+    FilteredResourceCollection.single(this.proxy, ResourceTest filter) :
+        this.filters = <ResourceTest>[ filter ];
+
+    @override
+    List<Resource> entries() {
+        return proxy.entries().where((Resource r) =>
+                filters.any((ResourceTest rt) => rt(r)));
+    }
 
 }
 
@@ -481,11 +508,20 @@ class DirectoryCollection extends ListableResourceCollection {
       if (child is ResourceListable) {
         if (! visited.contains(child) &&
             (recurseTest == null || recurseTest(child))) {
+
+          // DEBUG
+          //print("adding [${child.relname}] to recurse list");
+
+
           addMore(child, ret, visited);
         }
         //else { print("   skipped " + child.name); }
       } else if (resourceTest == null || resourceTest(child)) {
+
+        // DEBUG
         //print("    <="+child.name);
+
+
         ret.add(child);
       }
     }

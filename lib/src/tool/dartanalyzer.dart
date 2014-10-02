@@ -129,21 +129,16 @@ class DartAnalyzer extends BuildTool {
     });
 
 
-    // Chain the calls, rather than running in parallel.
-    // For running in parallel, we create all the Futures in the
-    // calls to dartAnalyzer, then return a Future.wait() on all of them.
-    var ret = new Future.value(null);
-    for (Resource r in inp) {
-      if (r.exists && r is ResourceStreamable) {
-        ret = ret.then((_) => new Future(() =>
-          dartAnalyzer(r, project.logger, messages,
+    // Run the dart analyzer over all the main dart files.
+    return dartAnalyzer(null, project.logger, messages,
             packageRoot: packageRoot, cmd: cmd,
             uniqueLines: uniqueLines,
-            activeTarget: project.activeTarget)
-        ));
-      }
-    }
-    ret = ret.then((_) {
+            activeTarget: project.activeTarget,
+            dartFiles: inp.where((Resource r) =>
+                    (r.exists && r is ResourceStreamable))
+            )
+
+    .then((_) {
       messages.close();
       if (hadErrors) {
         handleFailure(project,
@@ -162,7 +157,6 @@ class DartAnalyzer extends BuildTool {
       }
       return new Future<Project>.sync(() => project);
     });
-    return ret;
   }
 }
 

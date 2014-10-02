@@ -70,13 +70,16 @@ class UnitTests extends BuildTool {
 
   final TestResultWriter resultWriter;
 
+  final bool runInTestDir;
+
 
 
   factory UnitTests(String name,
       { String description: "", String phase: PHASE_BUILD,
       ResourceCollection testFiles: null, ResourceListable summaryDir: null,
       List<String> depends: null, List<String> testArgs: null,
-      FailureMode onFailure: null, TestResultWriter resultWriter }) {
+      FailureMode onFailure: null, TestResultWriter resultWriter,
+      bool runInTestDir: true }) {
     if (depends == null) {
       depends = <String>[];
     }
@@ -97,15 +100,13 @@ class UnitTests extends BuildTool {
     var targetDef = BuildTool
       .mkTargetDef(name, description, phase, pipe, depends, <String>[]);
     return new UnitTests._(name, targetDef, phase, pipe, summaryDir,
-      testArgs, onFailure, resultWriter);
+      testArgs, onFailure, resultWriter, runInTestDir);
   }
 
 
   UnitTests._(String name, TargetDef targetDef, String phase, Pipe pipe,
-      ResourceListable summaryDir, List<String> testArgs, FailureMode onFailure,
-      TestResultWriter resultWriter) :
-    this.summaryDir = summaryDir, this.onFailure = onFailure,
-    this.testArgs = testArgs, this.resultWriter = resultWriter,
+      this.summaryDir, this.testArgs, this.onFailure,
+      this.resultWriter, this.runInTestDir) :
     super(name, targetDef, phase, pipe);
 
 
@@ -122,10 +123,15 @@ class UnitTests extends BuildTool {
     var errorCounts = <int>[];
     Future runner = new Future.value(null);
     for (Resource r in inp) {
+      ResourceListable runDir = null;
+      if (runInTestDir) {
+        runDir = r.parent;
+      }
+
       runner = runner.then((_) => new Future(() {
         project.logger.info("Running test file " + r.name);
         return runSingleTest(project, r, errorCounts, resultWriter,
-        testArgs, summaryDir);
+          testArgs, summaryDir, runDir: runDir);
       }));
     }
 

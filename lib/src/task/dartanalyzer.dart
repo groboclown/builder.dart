@@ -34,15 +34,17 @@ import '../../task.dart';
 import '../os.dart';
 
 /**
- * Spawns the dartAnalyzer immediately.
+ * Spawns the dartAnalyzer immediately.  Returns the list of all the files
+ * checked.
  *
  * The [packageRoot] is the package directory.  The returned [Future]
  * executes when the process completes.
  */
-Future dartAnalyzer(
+Future<Map<Resource, LogMessage>> dartAnalyzer(
     Resource dartFile, Logger logger, StreamController<LogMessage> messages,
     { DirectoryResource packageRoot: null, String cmd: null,
-    Set<String> uniqueLines: null, TargetMethod activeTarget: null }) {
+    Set<String> uniqueLines: null, TargetMethod activeTarget: null,
+    Iterable<Resource> dartFiles }) {
   assert(messages != null);
   assert(dartFile != null);
   if (cmd == null) {
@@ -54,15 +56,32 @@ Future dartAnalyzer(
       "could not find " + cmd);
   }
 
-  var args = <String>['--machine', '--show-package-warnings'];
+  if (dartFiles == null) {
+      dartFiles = <Resource>[];
+  }
+  if (dartFile != null) {
+      List<Resource> df = new List.from(dartFiles);
+      df.insert(0, dartFile);
+      dartFiles = df;
+  }
+
+  var args = <String>['--format=machine', '--show-package-warnings'];
   if (packageRoot != null) {
     args.add('--package-root');
     args.add(packageRoot.relname);
   }
-  args.add(dartFile.relname);
+  if (dartFile != null) {
+    args.add(dartFile.relname);
+  }
+  for (Resource r in dartFiles) {
+    args.add(r.relname);
+  }
+
 
   logger.debug("Running [" + exec.relname + "] with arguments " +
-  args.toString());
+    args.toString());
+
+  Map<Resource, LogMessage> parsed = {};
 
   return Process.start(exec.relname, args).then((Process process) {
     // stderr: real output data to process
@@ -70,17 +89,19 @@ Future dartAnalyzer(
             _createCsvTransformer(uniqueLines))
       .listen((List<String> row) {
         if (row.length >= 8) {
+          Resource r = new FileEntityResource.fromEntity(new File(row[3]));
           var msg = new LogMessage.resource(
               level: row[0].toLowerCase(),
               tool: "dartanalyzer",
               category: row[1],
               id: row[2],
-              file: new FileEntityResource.fromEntity(new File(row[3])),
+              file: r,
               line: int.parse(row[4]),
               charStart: int.parse(row[5]),
               charEnd: int.parse(row[5]) + int.parse(row[6]),
               message: row[7]
           );
+          parsed[r] = msg;
           messages.add(msg);
           logger.message(msg);
         }
@@ -93,11 +114,13 @@ Future dartAnalyzer(
         });
     return process.exitCode;
   }).then((code) {
-    logger.fileInfo(
-        tool: "dartanalysis",
-        file: dartFile,
-        message: "Completed processing " + dartFile.name);
-    return new Future.value(0);
+    for (Resource r in dartFiles) {
+        logger.fileInfo(
+            tool: "dartanalysis",
+            file: r,
+            message: "Completed processing " + r.name);
+    }
+    return new Future.value(parsed);
   });
 }
 
@@ -161,8 +184,10 @@ StreamTransformer<String, List<String>> _createCsvTransformer(
                   leftover.write("\r");
                 } else if (c == 't') {
                   leftover.write("\t");
+                } else if (c == '\\') {
+                  leftover.write('\\');
                 } else {
-                  leftover.write(c);
+                  leftover.write('\\' + c);
                 }
                 state = 0;
                 break;

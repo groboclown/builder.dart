@@ -1,6 +1,8 @@
 # Example: building a library
 
-A simple `dartanalysis` example for a tool that uses a library.
+A simple `dartanalysis` and unit test example for a tool that uses a library.
 
-_This was originally created as a test for
-(Bug #29)(test for https://github.com/groboclown/builder.dart/issues/29)_
+This was originally created as a tests for:
+
+* (Bug #29)(https://github.com/groboclown/builder.dart/issues/29)
+* (Bug #31)(https://github.com/groboclown/builder.dart/issues/31)

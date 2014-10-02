@@ -55,10 +55,11 @@ final cleanOutput = new Delete("clean-output",
     onFailure: IGNORE_FAILURE);
 
 
-final unitTests = new UnitTests("test",
-    description: "Run unit tests and generate summary report",
-    testFiles: TEST_FILES,
-    summaryDir: TEST_SUMMARY_DIR);
+// Commented out until the new unit test isolate stuff is fixed.
+//final unitTests = new UnitTests("test",
+//    description: "Run unit tests and generate summary report",
+//    testFiles: TEST_FILES,
+//    summaryDir: TEST_SUMMARY_DIR);
 
 
 final docGen = new DocGen("docgen",

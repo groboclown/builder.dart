@@ -72,9 +72,10 @@ final ResourceCollection WEB_FILES = WEB_DIR.asCollection(
     resourceTest: DEFAULT_IGNORE_TEST, recurseTest: DEFAULT_IGNORE_TEST);
 
 
-final ResourceCollection DART_FILES = new ResourceSet.from([
-    BENCHMARK_FILES, BIN_FILES, DOC_FILES, EXAMPLE_FILES, LIB_FILES,
-    TEST_FILES, TOOL_FILES
-]);
+final ResourceCollection DART_FILES = new FilteredResourceCollection(
+    new ResourceSet.from([
+        BENCHMARK_FILES, BIN_FILES, DOC_FILES, EXAMPLE_FILES, LIB_FILES,
+        TEST_FILES, TOOL_FILES
+    ]), [ DART_FILE_FILTER ]);
 
 
