@@ -64,9 +64,13 @@ export 'src/tools.dart';
  * can be added with the [addPhase()] call.  Additionally, the phases
  * have the "default" target setting, not the tools.
  */
-void build(List<String> args, { libraryName: "build" }) {
+void build(List<String> args, {
+        String libraryName: "build",
+        String tempDir: null
+      }) {
   var buildArgs = new BuildArgs.fromCmd(args,
     tool.getTargets(libraryName: libraryName));
+  buildArgs.setProjectTempDir(tempDir);
   var project = new Project.parse(buildArgs);
   var changedTargets = decl.computeChanges(project);
   Future<int> code;
@@ -79,5 +83,4 @@ void build(List<String> args, { libraryName: "build" }) {
   }
   code.then((c) => exit(c));
 }
-
 

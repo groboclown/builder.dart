@@ -268,7 +268,7 @@ abstract class ResourceStreamable<T extends ResourceListable> extends Resource<T
  */
 abstract class ResourceListable<T extends Resource, R extends ResourceListable>
     extends Resource<R> {
-  List<T> list();
+  Iterable<T> list();
 
   /**
    * Return the child from inside this [Resource].  It does not have to be
@@ -297,7 +297,7 @@ abstract class ResourceListable<T extends Resource, R extends ResourceListable>
  * from call to call.
  */
 abstract class ResourceCollection {
-  List<Resource> entries();
+  Iterable<Resource> entries();
 }
 
 

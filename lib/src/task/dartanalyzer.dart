@@ -41,10 +41,10 @@ import '../os.dart';
  * executes when the process completes.
  */
 Future<Map<Resource, LogMessage>> dartAnalyzer(
-    Resource dartFile, Logger logger, StreamController<LogMessage> messages,
+    Resource dartFile, Logger logger, Sink<LogMessage> messages,
     { DirectoryResource packageRoot: null, String cmd: null,
     Set<String> uniqueLines: null, TargetMethod activeTarget: null,
-    Iterable<Resource> dartFiles }) {
+    Iterable<Resource> dartFiles, bool quiet: true }) {
   assert(messages != null);
   assert(dartFile != null);
   if (cmd == null) {
@@ -109,8 +109,20 @@ Future<Map<Resource, LogMessage>> dartAnalyzer(
     // stdout: logging information
     process.stdout.transform(new Utf8Decoder()).transform(new LineSplitter())
         .listen((String data) {
-          logger.fileInfo(tool: "dartanalyzer",
-          file: dartFile, message: data);
+          // The input files can send in a large swath of files, including
+          // parts of a library, that dart analyzer can't handle.  We'll
+          // cover up those messages if the "quiet" argument is passed.
+          bool doLog = true;
+          if (quiet) {
+            if (data == "Only libraries can be analyzed." ||
+                    data.endsWith(" is a part and can not be analyzed.")) {
+              doLog = false;
+            }
+          }
+          if (doLog) {
+            logger.fileInfo(tool: "dartanalyzer",
+                file: dartFile, message: data);
+          }
         });
     return process.exitCode;
   }).then((code) {
@@ -120,6 +132,7 @@ Future<Map<Resource, LogMessage>> dartAnalyzer(
             file: r,
             message: "Completed processing " + r.name);
     }
+    messages.close();
     return new Future.value(parsed);
   });
 }
@@ -156,9 +169,8 @@ StreamTransformer<String, List<String>> _createCsvTransformer(
             var c = value[p];
             switch (state) {
               case 0: // normal inside cell
-                if (c == '\\') {
-                  state = 1;
-                } else if (c == '|') {
+                // if (c=='\\') { state = 1; } // this isn't used
+                if (c == '|') {
                   // end of cell
                   currentRow.add(leftover.toString());
                   leftover.clear();
@@ -177,7 +189,7 @@ StreamTransformer<String, List<String>> _createCsvTransformer(
                   leftover.write(c);
                 }
                 break;
-              case 1: // escape
+              case 1: // escape - not actually used
                 if (c == 'n') {
                   leftover.write("\n");
                 } else if (c == 'r') {

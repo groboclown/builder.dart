@@ -46,7 +46,11 @@ final unitTestSources = new Relationship("src-to-tests",
 
 final dartAnalyzer = new DartAnalyzer("lint",
     description: "Check the Dart files for language issues",
-    dartFiles: DART_FILES);
+    dartFiles: new ResourceSet.from([
+        new DirectoryCollection.everything(
+          new DirectoryResource.named('lib')),
+        TEST_FILES
+      ], DART_FILE_FILTER));
 
 
 final cleanOutput = new Delete("clean-output",

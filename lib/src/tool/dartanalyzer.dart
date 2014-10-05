@@ -74,10 +74,12 @@ class DartAnalyzer extends BuildTool {
 
   final FailureMode onInfo;
 
+  final bool quiet;
+
   factory DartAnalyzer(String name,
       { String description: "", String phase: PHASE_BUILD,
       ResourceCollection dartFiles: null, List<String> depends: null,
-      DirectoryResource packageRoot: null,
+      DirectoryResource packageRoot: null, bool quiet: true,
       String cmd: null, FailureMode onFailure: null,
       FailureMode onWarning: null, FailureMode onInfo: null }) {
     if (depends == null) {
@@ -88,16 +90,13 @@ class DartAnalyzer extends BuildTool {
     var targetDef = BuildTool.mkTargetDef(name, description, phase, pipe,
         depends, <String>[]);
     return new DartAnalyzer._(name, targetDef, phase, pipe, cmd, packageRoot,
-    onFailure, onWarning, onInfo);
+        onFailure, onWarning, onInfo, quiet);
   }
 
 
   DartAnalyzer._(String name, TargetDef targetDef, String phase, Pipe pipe,
-      String cmd, DirectoryResource packageRoot, FailureMode onFailure,
-      FailureMode onWarning, FailureMode onInfo) :
-    this.cmd = cmd, this.packageRoot = packageRoot,
-    this.onFailure = onFailure, this.onWarning = onWarning,
-    this.onInfo = onInfo,
+      this.cmd, this.packageRoot, this.onFailure,
+      this.onWarning, this.onInfo, this.quiet) :
     super(name, targetDef, phase, pipe);
 
 
@@ -130,16 +129,15 @@ class DartAnalyzer extends BuildTool {
 
 
     // Run the dart analyzer over all the main dart files.
-    return dartAnalyzer(null, project.logger, messages,
+    return dartAnalyzer(null, project.logger, messages.sink,
             packageRoot: packageRoot, cmd: cmd,
             uniqueLines: uniqueLines,
             activeTarget: project.activeTarget,
             dartFiles: inp.where((Resource r) =>
-                    (r.exists && r is ResourceStreamable))
-            )
+                    (r.exists && r is ResourceStreamable)),
+            quiet: quiet)
 
     .then((_) {
-      messages.close();
       if (hadErrors) {
         handleFailure(project,
           mode: onFailure,

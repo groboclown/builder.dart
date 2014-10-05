@@ -45,19 +45,24 @@ class Project {
   final Map<String, String> _properties = {};
   final ResourceCollection changed;
   final ResourceCollection removed;
+  final DirectoryResource buildTempDir;
   final List<List> _errors = []; // list of [ exception, stacktrace, bool ]
 
   Project.parse(BuildArgs args) :
       _baseLogger = args.logger,
       _targets = new List<TargetMethod>.from(args.allTargets, growable: false),
       changed = filenamesAsCollection(args.changed),
-      removed = filenamesAsCollection(args.removed);
+      removed = filenamesAsCollection(args.removed),
+      buildTempDir = args.buildTempDir == null
+        ? null
+        : new DirectoryResource.named(args.buildTempDir);
 
   Project._fromChild(Project parent) :
       _baseLogger = parent._baseLogger,
       _targets = null,
       changed = null,
-      removed = null;
+      removed = null,
+      buildTempDir = parent.buildTempDir;
 
   TargetMethod get activeTarget {
     throw new NoRunningTargetException();
@@ -290,7 +295,7 @@ class Project {
       List<_TargetOrder> ret) {
     // DEBUG topo sort
     //print("topo-sort->" + root.tm.name);
-    
+
     state[root] = _TOPO_STATE.VISITING;
     visiting.add(root.tm.name);
 
@@ -298,7 +303,7 @@ class Project {
       // DEBUG topo sort
       //print("   " + root.tm.name + " -> " + dependentName +
       //  (root.tm.targetDef.weakDepends.contains(dependentName) ? " (weak)" : ""));
-      
+
       if (! orders.containsKey(dependentName)) {
         throw new MissingTargetException(root.tm.name, dependentName);
       }
@@ -322,7 +327,7 @@ class Project {
     }
     state[root] = _TOPO_STATE.VISITED;
     ret.add(root);
-    
+
     // DEBUG topo sort
     //print("topo-sort<- "+root.tm.name);
   }

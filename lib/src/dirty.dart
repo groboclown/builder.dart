@@ -21,51 +21,53 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-
-library builder.transformer.docgen;
-
 /**
- * **FIXME** from what I can tell, the builder does not allow for multiple
- * transformers in a single library.  So, for the moment, this library is
- * ommitted from the `lib/transformer.dart` file.
- *
- * Transformer for use with the `pub` command, to allow running doc generation
- * as part of the "build" process.
- *
- * Run this by setting up your pubspec.yaml file like:
- *
- *     name: myapp
- *     dependencies:
- *       **builder: any**
- *     **transformers:**
- *     **- builder:**
- *       **entry_points: test/all_tests.dart**
+ * Handles the dirty file detection for resources.  If a resource has been
+ * changed since the previous run of a target, then it is marked as "dirty",
+ * and will be returned.  If it hasn't changed, then the target won't use
+ * it for processing.
  */
+library builder.src.dirty;
 
-import 'dart:async';
-
-import 'package:barback/barback.dart';
+import 'resource.dart';
 
 
-class DocGenTransformer extends Transformer {
-  final BarbackSettings settings;
+class DirtyDepot {
+  final DirectoryResource dirtyDir;
 
-  DocGenTransformer() : settings = null;
-  DocGenTransformer.asPlugin(this.settings);
-
+  DirtyDepot.fromTempDir(this.dirtyDir);
 
   /**
-   * Space-separated list of file extensions with leading `.` that are the
-   * allowed for the primary inputs to this transformer.
+   * Clean out all files from the depot, so that everything looks like a
+   * dirty file.
    */
-  @override
-  String get allowedExtensions => ".dart";
-
-
-  @override
-  Future apply(Transform transform) {
+  void clean() {
     // FIXME
-    print("should run unit test on " + transform.primaryInput.toString());
+  }
+
+  /**
+   * Returns true if a file is not known to the depot, or is different than
+   * the version known to the depot.
+   */
+  bool isDirty(ResourceStreamable res) {
+    // FIXME
+    return true;
+  }
+
+  Iterable<Resource> asDirtyResources(Iterable<Resource> resources) {
+    // FIXME
+    return resources;
+  }
+
+
+}
+
+
+class DirtyResourceCollection implements ResourceCollection {
+  // FIXME
+  @override
+  Iterable<Resource> entries() {
+    // TODO: implement entries
     return null;
   }
 }

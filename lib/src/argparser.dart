@@ -52,6 +52,13 @@ class BuildArgs {
   final List<String> changed;
   final List<String> removed;
 
+  /**
+   * Directory of settings used for this project's build temporary objects.
+   * If `null`, then no temporary build files will be used.
+   *
+   */
+  String buildTempDir;
+
 
 
   /**
@@ -60,7 +67,7 @@ class BuildArgs {
   factory BuildArgs.fromCmd(Iterable<String> args,
       Iterable<TargetMethod> supportedTargets,
       { void usageCallback(ArgParser parser) } ) {
-    var res = _parseArgs(args, supportedTargets, usageCallback);
+    ArgResults res = _parseArgs(args, supportedTargets, usageCallback);
     var targets = <TargetMethod>[];
     for (var tgt in supportedTargets) {
       if (res[tgt.name]) {
@@ -85,32 +92,47 @@ class BuildArgs {
     var defaultTargets = supportedTargets.where(
         (t) => t.targetDef.isDefault);
 
-    var logger;
+    AbstractLogger logger;
     if (res['machine']) {
       logger = new JsonLogger();
     } else {
       logger = new CmdLogger(res['color']);
     }
 
-    var changed = res['changed'];
+    List<String> changed = res['changed'];
     if (changed == null) {
       changed = <String>[];
     }
-    var removed = res['removed'];
+    List<String> removed = res['removed'];
     if (removed == null) {
       removed = <String>[];
     }
 
     return new BuildArgs(logger, supportedTargets, targets, changed,
-      removed, defaultTargets);
+      removed, defaultTargets,
+      // FIXME set this to a better value
+      null);
   }
 
   BuildArgs(this.logger, this.allTargets, this.calledTargets,
-      this.changed, this.removed, this.defaultTargets);
+      this.changed, this.removed, this.defaultTargets, this.buildTempDir);
 
 
   Iterable<TargetMethod> get targetsToRun =>
     calledTargets.isEmpty ? defaultTargets : calledTargets;
+
+
+  /**
+   * Sets the temporary directory as defined by the project.  This will override
+   * environment settings (because the build file declared its preferred
+   * location), but will not override explicit user definitions for the
+   * directory.
+   */
+  void setProjectTempDir(String tempDir) {
+    // For now, because we don't support user overrides or environment
+    // defaults, we just use this value.
+    buildTempDir = tempDir;
+  }
 }
 
 

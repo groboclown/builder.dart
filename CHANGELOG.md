@@ -4,11 +4,29 @@
 
 **::Overview::**
 
-(nothing yet)
+Bug fixes.
 
 **::Details::**
 
-(nothing yet)
+* Bug fixes:
+    * Removed extra message `Only libraries can be analyzed.` from the
+      DartAnalyzer tool.  This can be disabled by setting a 'quiet' flag in
+      the tool to `false`.
+    * Switched the dartanalyzer to take a `Sink` instead of a `StreamController`
+      for the messages.  The dartanalyzer tool also closes the sink when the
+      processing completes.
+    * Fixed the dartanalyzer where it was incorrectly interpreting the Windows
+      directory seperator (\) as an escape sequence.
+* API changes
+    * Changed the `Pipe` interface so it returns `Iterable` rather than
+      `List` objects.
+    * Changed the `ResourceCollection` interface so it returns `Iterable` rather
+      than a `List` of resources.
+    * Changed the `ResourceListable` interface so it returns `Iterable` rather
+      than a `List` of resources.
+* Improvements
+    * Started work on the dirty detection code.  It isn't being used at the
+      moment.
 
 
 ## 0.2.2
