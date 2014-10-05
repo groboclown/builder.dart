@@ -17,7 +17,7 @@ final unitTests = new UnitTests("test",
 
 final dartAnalyzer = new DartAnalyzer("lint",
     description: "Check the Dart files for language issues",
-    dartFiles: LIB_FILES);
+    dartFiles: new ResourceSet.from([ TEST_FILES, LIB_FILES ]));
 
 main(List<String> args) {
   build(args);
