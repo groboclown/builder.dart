@@ -1,6 +1,18 @@
 # Change History for builder.dart
 
-## 0.2.3 (in progress)
+
+## 0.2.4
+
+**::Overview::**
+
+(nothing yet)
+
+**::Details::**
+
+(nothing yet)
+
+
+## 0.2.3
 
 **::Overview::**
 

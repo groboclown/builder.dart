@@ -1,6 +1,6 @@
 name: builder
 author: Groboclown <matt@groboclown.net>
-version: 0.2.3
+version: 0.2.4
 homepage: https://github.com/groboclown/builder.dart
 description: Build tool library for Dart, to easily create flexible `build.dart` files compatible with the Dart Editor, and `pub` transformers for standard Dart tools.
 dependencies:
