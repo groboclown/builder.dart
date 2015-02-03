@@ -5,11 +5,12 @@
 
 **::Overview::**
 
-(nothing yet)
+Bug fixes
 
 **::Details::**
 
-(nothing yet)
+* Bug Fixes:
+    * Tighter version constraint on exported package (#33)
 
 
 ## 0.2.3
